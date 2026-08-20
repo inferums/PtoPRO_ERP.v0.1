@@ -3,20 +3,26 @@ import Reveal from "./Reveal";
 import { copyText } from "../lib/utils";
 
 type Origin = "local" | "repo";
-type Kind = "manifest" | "sw" | "icon" | "code" | "other";
+type Kind = "manifest" | "sw" | "icon" | "server" | "code" | "other";
 type Incoming = { path: string; size: number; kind: Kind; origin: Origin; text?: string };
 
 const SKIP_DIRS = /(\/|^)(node_modules|\.git|dist|build|\.next|\.cache|coverage)(\/|$)/;
 const SKIP_FILES = /^(\.DS_Store|Thumbs\.db|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|.*\.map)$/;
 const MAX_TEXT = 400_000;
-const MAX_FILES = 150;
+const MAX_FILES = 200;
 
 function detectKind(path: string): Kind {
   const name = path.split("/").pop()!.toLowerCase();
   if (name === "manifest.json" || name.endsWith(".webmanifest")) return "manifest";
   if (/(^|\/)(sw|service-worker|serviceworker)([-.][\w-]*)?\.js$/.test(path.toLowerCase())) return "sw";
+  if (
+    /(^|\/)(prisma|migrations|app\/api|pages\/api|drizzle)\//i.test(path) ||
+    /\.(db|sqlite3?|sql|py)$/i.test(name) ||
+    /^(requirements\.txt|caddyfile|dockerfile|docker-compose.*|nginx\.conf|run-server\.sh|manage\.py|procfile|go\.mod|cargo\.toml|server\.(js|ts))$/i.test(name)
+  )
+    return "server";
   if (/\.(png|svg|ico|jpe?g|webp)$/.test(name)) return "icon";
-  if (/\.(js|ts|jsx|tsx|css|html|json|md|vue|svelte|astro|php|py)$/.test(name)) return "code";
+  if (/\.(js|ts|jsx|tsx|css|html|json|md|vue|svelte|astro|php)$/.test(name)) return "code";
   return "other";
 }
 
@@ -59,14 +65,33 @@ async function collectEntry(entry: FileSystemEntry, prefix: string, out: { file:
   }
 }
 
-const KIND_LABEL: Record<Kind, string> = { manifest: "manifest", sw: "sw", icon: "иконка", code: "код", other: "прочее" };
+const KIND_LABEL: Record<Kind, string> = { manifest: "manifest", sw: "sw", icon: "иконка", server: "сервер", code: "код", other: "прочее" };
 const KIND_CLS: Record<Kind, string> = {
   manifest: "border-amber/50 text-amber",
   sw: "border-teal/50 text-teal",
-  icon: "border-coral/50 text-coral",
-  code: "border-line2 text-mut",
-  other: "border-line text-dim",
+  icon: "border-mut/50 text-mut",
+  server: "border-coral/50 text-coral",
+  code: "border-line2 text-dim",
+  other: "border-line text-dim/80",
 };
+
+/* маркеры стека: по ним шлюз понимает, что за проект приехал */
+const STACK_DETECT: { label: string; re: RegExp }[] = [
+  { label: "Next.js", re: /(^|\/)next\.config\.(js|ts|mjs)$/i },
+  { label: "Nuxt", re: /(^|\/)nuxt\.config\.(js|ts)$/i },
+  { label: "SvelteKit", re: /(^|\/)svelte\.config\.(js|ts)$/i },
+  { label: "Bun", re: /(^|\/)bun\.lockb?$/i },
+  { label: "Prisma", re: /(^|\/)prisma\/schema\.prisma$/i },
+  { label: "SQLite", re: /\.(db|sqlite3?)$/i },
+  { label: "Python", re: /(^|\/)requirements\.txt$|\.py$/i },
+  { label: "Caddy", re: /(^|\/)caddyfile$/i },
+  { label: "Docker", re: /(^|\/)(dockerfile|docker-compose)/i },
+  { label: "Vite", re: /(^|\/)vite\.config\.(js|ts|mjs)$/i },
+  { label: "shadcn/ui", re: /(^|\/)components\.json$/i },
+  { label: "Tailwind", re: /(^|\/)(tailwind|postcss)\.config\.(js|ts|mjs|cjs)$/i },
+];
+/* стеки, которые не живут в статике — им нужен серверный рантайм */
+const SERVER_STACK = new Set(["Next.js", "Nuxt", "SvelteKit", "Prisma", "SQLite", "Python", "Caddy", "Docker"]);
 
 export default function Upload() {
   const [incoming, setIncoming] = useState<Incoming[]>([]);
@@ -170,6 +195,9 @@ export default function Upload() {
     pkg: incoming.some((f) => f.path.endsWith("package.json")),
   };
 
+  const stack = STACK_DETECT.filter((s) => incoming.some((f) => s.re.test(f.path))).map((s) => s.label);
+  const fullstack = incoming.some((f) => f.kind === "server") || stack.some((s) => SERVER_STACK.has(s));
+
   const sendToValidator = (text: string) => {
     window.dispatchEvent(new CustomEvent("pwa-dock:manifest", { detail: text }));
   };
@@ -178,11 +206,14 @@ export default function Upload() {
     const lines = [
       "PWA DOCK — ПРОТОКОЛ ПРИЁМА",
       `файлов: ${summary.total} · manifest: ${summary.manifest ? "да" : "НЕТ"} · sw: ${summary.sw ? "да" : "НЕТ"} · иконок: ${summary.icons} · package.json: ${summary.pkg ? "да" : "нет"}`,
+      `stack: ${stack.length ? stack.join(" · ") : "не определён"} | режим: ${fullstack ? "FULL-STACK" : "статика"}`,
       "",
       ...incoming.slice(0, 40).map((f) => `— ${f.path} (${KIND_LABEL[f.kind]}, ${fmtSize(f.size)})`),
       incoming.length > 40 ? `… и ещё ${incoming.length - 40}` : "",
       "",
-      "Готов к стыковке: создай эти файлы у себя и запусти сборку.",
+      fullstack
+        ? "Режим FULL-STACK: серверная часть (БД, API, скрипты) остаётся на твоём хостинге. В док уходит PWA-слой — пришли в чат СОДЕРЖИМОЕ: manifest, sw.js, package.json."
+        : "Готов к стыковке: пришли в чат содержимое ключевых файлов (manifest, sw.js, точка входа) — по одному протоколу файлы не воссоздать.",
     ].filter((l) => l !== undefined);
     return lines.join("\n");
   };
@@ -206,8 +237,8 @@ export default function Upload() {
           </h2>
           <p className="mt-5 max-w-xl text-[15.5px] leading-relaxed text-mut">
             Перетащи папку от другого ИИ прямо в шлюз — разбор идёт <span className="text-ink">локально в твоём браузере</span>,
-            файлы никуда не отправляются. Шлюз найдёт manifest, service worker и иконки, а отчёт
-            можно скопировать и вставить в чат одним сообщением.
+            файлы никуда не отправляются. Шлюз найдёт manifest, service worker и иконки, определит
+            стек и честно скажет, что берём на борт, а что останется на твоём сервере.
           </p>
         </Reveal>
 
@@ -349,6 +380,21 @@ export default function Upload() {
                 </div>
               ) : (
                 <>
+                  {stack.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-4 py-2.5">
+                      <span className="mr-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">stack</span>
+                      {stack.map((s) => (
+                        <span
+                          key={s}
+                          className={`border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+                            SERVER_STACK.has(s) ? "border-coral/50 text-coral" : "border-line2 text-mut"
+                          }`}
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="max-h-[330px] flex-1 overflow-y-auto p-2.5">
                     {incoming.map((f, i) => (
                       <div key={f.path + i} className="pop-in group flex items-center gap-3 border-b border-line/50 px-2.5 py-2.5 last:border-0 hover:bg-panel/40" style={{ animationDelay: `${Math.min(i * 30, 400)}ms` }}>
@@ -375,6 +421,13 @@ export default function Upload() {
                   </div>
 
                   <div className="border-t border-line p-4">
+                    {fullstack && (
+                      <p className="pop-in mb-3 border border-coral/40 bg-coral/[0.07] px-3.5 py-2.5 font-mono text-[11px] leading-relaxed text-coral">
+                        это full-stack проект: БД, API и скрипты в статический док не переезжают.
+                        На борт идёт фронтенд + PWA-слой — пришли в чат <span className="text-ink">содержимое</span>{" "}
+                        manifest и sw.js, остальное я допрошу.
+                      </p>
+                    )}
                     {!summary.manifest && (
                       <p className="mb-3 border border-amber/40 bg-amber/[0.07] px-3.5 py-2.5 font-mono text-[11.5px] leading-relaxed text-amber">
                         manifest не найден — без него установка не взлетит. Скажи тому ИИ: «добавь
@@ -398,8 +451,10 @@ export default function Upload() {
                         очистить
                       </button>
                     </div>
-                    <p className="mt-3 text-center font-mono text-[10.5px] text-dim">
-                      вставь отчёт в чат — и я воссоздам структуру у себя
+                    <p className="mt-3 text-center font-mono text-[10.5px] leading-relaxed text-dim">
+                      {fullstack
+                        ? "отчёт — это список; дальше нужны сами файлы (начни с manifest и sw)"
+                        : "отчёт покажет список — дальше пришли содержимое ключевых файлов"}
                     </p>
                   </div>
                 </>
