@@ -1,4 +1,5 @@
 const NAV = [
+  { href: "#upload", label: "Загрузка" },
   { href: "#checklist", label: "Чек-лист" },
   { href: "#validator", label: "Валидатор" },
   { href: "#steps", label: "Интеграция" },

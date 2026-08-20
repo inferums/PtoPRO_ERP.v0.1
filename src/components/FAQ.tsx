@@ -37,7 +37,7 @@ export default function FAQ() {
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">05 — faq</p>
+              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">06 — faq</p>
               <h2 className="mt-4 font-display text-3xl font-black leading-tight text-ink md:text-5xl">
                 Спрашивают <span className="text-amber">перед стыковкой</span>
               </h2>
@@ -60,7 +60,7 @@ export default function FAQ() {
                 Не нашёл свой вопрос?
               </p>
               <p className="mt-3 text-[14px] leading-relaxed text-mut">
-                Просто вставь сюда manifest из шага «02 — валидатор» и посмотри, что скажет
+                Просто вставь сюда manifest из шага «03 — валидатор» и посмотри, что скажет
                 среда. В 9 случаях из 10 весь ответ — в зелёных галочках.
               </p>
               <a

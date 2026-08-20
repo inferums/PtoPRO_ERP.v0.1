@@ -1,6 +1,7 @@
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Ticker from "./components/Ticker";
+import Upload from "./components/Upload";
 import Checklist from "./components/Checklist";
 import Validator from "./components/Validator";
 import Steps from "./components/Steps";
@@ -22,6 +23,7 @@ export default function App() {
       <main className="relative z-10">
         <Hero />
         <Ticker />
+        <Upload />
         <Checklist />
         <Validator />
         <Steps />

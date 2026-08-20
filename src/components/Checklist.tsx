@@ -81,7 +81,7 @@ export default function Checklist() {
     <section id="checklist" className="relative scroll-mt-24 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <Reveal>
-          <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">01 — чек-лист</p>
+          <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">02 — чек-лист</p>
           <h2 className="mt-4 max-w-2xl font-display text-3xl font-900 leading-tight text-ink md:text-5xl">
             Шесть пунктов <span className="text-amber">до кнопки</span> «Установить»
           </h2>

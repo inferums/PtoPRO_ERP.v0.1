@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Reveal from "./Reveal";
+import { prefersReducedMotion } from "../lib/utils";
 
 type Level = "ok" | "warn" | "err";
 type Result = { level: Level; field: string; msg: string };
@@ -145,6 +146,22 @@ function LevelIcon({ level }: { level: Level }) {
 export default function Validator() {
   const [src, setSrc] = useState("");
 
+  /* приём manifest из приёмного шлюза (дропзона / репозиторий) */
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (typeof detail === "string" && detail.trim()) {
+        setSrc(detail);
+        document.getElementById("validator")?.scrollIntoView({
+          behavior: prefersReducedMotion() ? "auto" : "smooth",
+          block: "start",
+        });
+      }
+    };
+    window.addEventListener("pwa-dock:manifest", handler);
+    return () => window.removeEventListener("pwa-dock:manifest", handler);
+  }, []);
+
   const report = useMemo(() => {
     if (!src.trim()) return null;
     return validate(src);
@@ -167,7 +184,7 @@ export default function Validator() {
     <section id="validator" className="relative scroll-mt-24 border-t border-line bg-bg2/40 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-5">
         <Reveal>
-          <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">02 — валидатор</p>
+          <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">03 — валидатор</p>
           <h2 className="mt-4 max-w-2xl font-display text-3xl font-black leading-tight text-ink md:text-5xl">
             Скорми мне manifest <span className="text-teal">от того ИИ</span>
           </h2>

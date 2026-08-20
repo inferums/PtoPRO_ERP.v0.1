@@ -19,6 +19,7 @@ export default function Footer() {
 
           <nav className="grid grid-cols-2 gap-x-14 gap-y-2.5">
             {[
+              { href: "#upload", label: "Загрузка" },
               { href: "#checklist", label: "Чек-лист" },
               { href: "#validator", label: "Валидатор" },
               { href: "#steps", label: "Интеграция" },

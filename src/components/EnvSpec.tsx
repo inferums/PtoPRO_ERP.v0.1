@@ -52,7 +52,7 @@ export default function EnvSpec() {
         <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
           <div className="lg:sticky lg:top-28 lg:self-start">
             <Reveal>
-              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">04 — среда</p>
+              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">05 — среда</p>
               <h2 className="mt-4 font-display text-3xl font-black leading-tight text-ink md:text-5xl">
                 Паспорт <span className="text-teal">этого дока</span>
               </h2>
