@@ -22,6 +22,7 @@ export default function Footer() {
               { href: "#upload", label: "Загрузка" },
               { href: "#checklist", label: "Чек-лист" },
               { href: "#validator", label: "Валидатор" },
+              { href: "#sw", label: "Разбор SW" },
               { href: "#steps", label: "Интеграция" },
               { href: "#env", label: "Среда" },
               { href: "#faq", label: "FAQ" },

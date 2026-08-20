@@ -231,7 +231,7 @@ export default function Steps() {
         {/* sticky column */}
         <div className="lg:sticky lg:top-28 lg:self-start">
           <Reveal>
-            <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">04 — интеграция</p>
+            <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-teal">05 — интеграция</p>
             <h2 className="mt-4 font-display text-3xl font-black leading-tight text-ink md:text-5xl">
               Перенос за <span className="text-amber">5 шагов</span>
             </h2>

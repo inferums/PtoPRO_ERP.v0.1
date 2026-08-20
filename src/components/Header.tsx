@@ -2,6 +2,7 @@ const NAV = [
   { href: "#upload", label: "Загрузка" },
   { href: "#checklist", label: "Чек-лист" },
   { href: "#validator", label: "Валидатор" },
+  { href: "#sw", label: "SW" },
   { href: "#steps", label: "Интеграция" },
   { href: "#env", label: "Среда" },
   { href: "#faq", label: "FAQ" },
@@ -29,7 +30,7 @@ export default function Header() {
           </span>
         </a>
 
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav className="hidden items-center gap-4 md:flex lg:gap-6">
           {NAV.map((n) => (
             <a
               key={n.href}
@@ -45,7 +46,7 @@ export default function Header() {
 
         <a
           href="#steps"
-          className="flex items-center gap-2.5 border border-line bg-panel px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-mut transition-all duration-300 hover:border-teal2 hover:text-teal"
+          className="hidden items-center gap-2.5 border border-line bg-panel px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-mut transition-all duration-300 hover:border-teal2 hover:text-teal xl:flex"
         >
           <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-teal" />
           среда готова

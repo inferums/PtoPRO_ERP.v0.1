@@ -4,6 +4,7 @@ import Ticker from "./components/Ticker";
 import Upload from "./components/Upload";
 import Checklist from "./components/Checklist";
 import Validator from "./components/Validator";
+import SWAudit from "./components/SWAudit";
 import Steps from "./components/Steps";
 import EnvSpec from "./components/EnvSpec";
 import FAQ from "./components/FAQ";
@@ -26,6 +27,7 @@ export default function App() {
         <Upload />
         <Checklist />
         <Validator />
+        <SWAudit />
         <Steps />
         <EnvSpec />
         <FAQ />
