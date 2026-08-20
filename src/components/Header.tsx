@@ -6,6 +6,7 @@ const NAV = [
   { href: "#steps", label: "Интеграция" },
   { href: "#env", label: "Среда" },
   { href: "#faq", label: "FAQ" },
+  { href: "#final", label: "Накладная" },
 ];
 
 function LogoMark() {
@@ -35,7 +36,9 @@ export default function Header() {
             <a
               key={n.href}
               href={n.href}
-              className="group relative font-mono text-[12px] uppercase tracking-[0.14em] text-mut transition-colors hover:text-teal"
+              className={`group relative font-mono text-[11.5px] uppercase tracking-[0.12em] text-mut transition-colors hover:text-teal ${
+                n.href === "#env" ? "hidden lg:inline" : ""
+              }`}
             >
               <span className="text-dim mr-1.5 transition-colors group-hover:text-teal2">/</span>
               {n.label}

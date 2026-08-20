@@ -8,6 +8,7 @@ import SWAudit from "./components/SWAudit";
 import Steps from "./components/Steps";
 import EnvSpec from "./components/EnvSpec";
 import FAQ from "./components/FAQ";
+import FinalDock from "./components/FinalDock";
 import Footer from "./components/Footer";
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
         <Steps />
         <EnvSpec />
         <FAQ />
+        <FinalDock />
       </main>
 
       <div className="relative z-10">

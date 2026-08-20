@@ -26,6 +26,7 @@ export default function Footer() {
               { href: "#steps", label: "Интеграция" },
               { href: "#env", label: "Среда" },
               { href: "#faq", label: "FAQ" },
+              { href: "#final", label: "Накладная" },
               { href: "#top", label: "Наверх ↑" },
             ].map((l) => (
               <a
