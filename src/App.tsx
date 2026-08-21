@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   loadState,
   saveState,
@@ -28,7 +28,7 @@ import {
 } from "./components/icons";
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
-type Toast = { id: number; text: string };
+type Toast = { id: number; text: string; tone: "ok" | "err" };
 
 const NAV: { id: View; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
   { id: "dashboard", label: "Обзор", icon: (p) => <IconGrid {...p} /> },
@@ -46,9 +46,22 @@ const TITLES: Record<View, { t: string; s: string }> = {
 
 /* ---------- реквизиты ---------- */
 
-function SettingsView({ own, onSave, onReset }: { own: Own; onSave: (o: Own) => void; onReset: () => void }) {
+function SettingsView({
+  own,
+  onSave,
+  onReset,
+  onExport,
+  onImport,
+}: {
+  own: Own;
+  onSave: (o: Own) => void;
+  onReset: () => void;
+  onExport: () => void;
+  onImport: (f: File) => void;
+}) {
   const [f, setF] = useState({ ...own });
   const [confirmReset, setConfirmReset] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof Own) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
   const inp =
     "w-full border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand";
@@ -117,6 +130,39 @@ function SettingsView({ own, onSave, onReset }: { own: Own; onSave: (o: Own) => 
         </div>
 
         <div className="border border-line bg-surface p-6">
+          <h3 className="font-display text-[14px] font-bold text-ink">Резервные копии</h3>
+          <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
+            Вся база выгружается одним JSON-файлом — переносите между браузерами и устройствами,
+            пока данные живут в localStorage. Это «план Б» до подключения облачной базы.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <button
+              onClick={onExport}
+              className="flex cursor-pointer items-center gap-2 border border-brand px-4 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-brand transition-colors hover:bg-brand hover:text-white"
+            >
+              <IconDownload size={13} /> выгрузить json
+            </button>
+            <button
+              onClick={() => importRef.current?.click()}
+              className="cursor-pointer border border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-navy hover:text-navy"
+            >
+              загрузить копию
+            </button>
+            <input
+              ref={importRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onImport(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="border border-line bg-surface p-6">
           <h3 className="font-display text-[14px] font-bold text-ink">PWA-установка</h3>
           <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
             В Chrome и Edge кнопка «Установить» появится в адресной строке, на Android — системный диалог.
@@ -180,9 +226,9 @@ export default function App() {
     return () => window.removeEventListener("beforeinstallprompt", h);
   }, []);
 
-  const toast = (text: string) => {
+  const toast = (text: string, tone: "ok" | "err" = "ok") => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text }]);
+    setToasts((t) => [...t, { id, text, tone }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
   };
 
@@ -220,6 +266,34 @@ export default function App() {
     const p = state.parties.find((x) => x.id === id);
     setState((st) => ({ ...st, parties: st.parties.filter((x) => x.id !== id) }));
     if (p) toast(`«${p.name}» удалён из базы`);
+  };
+
+  const exportBackup = () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ip-dokumenty-backup-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 800);
+    toast("Резервная копия выгружена в JSON");
+  };
+
+  const importBackup = (file: File) => {
+    file
+      .text()
+      .then((text) => {
+        const parsed = JSON.parse(text) as Partial<State>;
+        if (!Array.isArray(parsed.docs) || !Array.isArray(parsed.parties) || !parsed.own) {
+          throw new Error("bad shape");
+        }
+        setState({ docs: parsed.docs, parties: parsed.parties, own: parsed.own });
+        toast(`Импортировано: ${parsed.docs.length} документов, ${parsed.parties.length} контрагентов`);
+      })
+      .catch(() => toast("Файл не похож на резервную копию — импорт отменён", "err"));
   };
 
   const install = async () => {
@@ -369,6 +443,8 @@ export default function App() {
                   setState(seedState());
                   toast("Демо-данные восстановлены");
                 }}
+                onExport={exportBackup}
+                onImport={importBackup}
               />
             )}
           </div>
@@ -403,7 +479,12 @@ export default function App() {
       {/* тосты */}
       <div className="pointer-events-none fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-2">
         {toasts.map((t) => (
-          <div key={t.id} className="toast-in border-l-[3px] border-paid bg-navy px-4 py-3 font-mono text-[12px] text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)]">
+          <div
+            key={t.id}
+            className={`toast-in border-l-[3px] bg-navy px-4 py-3 font-mono text-[12px] text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
+              t.tone === "ok" ? "border-paid" : "border-danger"
+            }`}
+          >
             {t.text}
           </div>
         ))}
