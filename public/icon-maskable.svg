@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- фон: заливает весь квадрат — обязательное условие maskable -->
+  <rect width="512" height="512" fill="#1E88E5"/>
+  <!-- документ: вписан в безопасную зону (круг 80%) -->
+  <path d="M158 108 H306 L354 156 V404 H158 Z" fill="#FFFFFF"/>
+  <!-- загнутый угол -->
+  <path d="M306 108 V156 H354 Z" fill="#BBDEFB"/>
+  <!-- строки документа -->
+  <rect x="190" y="208" width="132" height="16" fill="#1E88E5"/>
+  <rect x="190" y="246" width="96" height="16" fill="#1E88E5"/>
+  <rect x="190" y="284" width="132" height="16" fill="#1E88E5"/>
+  <!-- печать ИП -->
+  <circle cx="308" cy="346" r="38" fill="#FFB454"/>
+  <path d="M292 346 L304 358 L326 332" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="square"/>
+</svg>

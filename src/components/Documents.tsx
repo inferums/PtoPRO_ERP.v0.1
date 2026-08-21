@@ -1,0 +1,187 @@
+import { useMemo, useState } from "react";
+import {
+  calc,
+  fmtMoney,
+  fmtDate,
+  STATUS_META,
+  STATUS_ORDER,
+  TYPE_META,
+  type Doc,
+  type DocStatus,
+  type Party,
+} from "../lib/store";
+import { IconArrow, IconPencil, IconPlus, IconSearch } from "./icons";
+
+export default function Documents({
+  docs,
+  parties,
+  onPreview,
+  onEdit,
+  onNew,
+  onStatus,
+}: {
+  docs: Doc[];
+  parties: Party[];
+  onPreview: (id: string) => void;
+  onEdit: (doc: Doc) => void;
+  onNew: () => void;
+  onStatus: (id: string, s: DocStatus) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<DocStatus | "all">("all");
+
+  const partyName = (id: string) => parties.find((p) => p.id === id)?.name ?? "—";
+
+  const filtered = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return [...docs]
+      .sort((a, b) => b.date.localeCompare(a.date) || b.number - a.number)
+      .filter((d) => (filter === "all" ? true : d.status === filter))
+      .filter((d) => {
+        if (!query) return true;
+        return (
+          String(d.number).includes(query) ||
+          partyName(d.counterpartyId).toLowerCase().includes(query) ||
+          d.items.some((it) => it.name.toLowerCase().includes(query))
+        );
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docs, parties, q, filter]);
+
+  const counts = STATUS_ORDER.map((s) => ({ s, n: docs.filter((d) => d.status === s).length }));
+
+  return (
+    <div className="fade-up">
+      {/* фильтры */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setFilter("all")}
+            className={`cursor-pointer border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-all ${
+              filter === "all" ? "border-navy bg-navy text-white" : "border-line bg-surface text-mut hover:border-line2 hover:text-ink"
+            }`}
+          >
+            все · {docs.length}
+          </button>
+          {counts.map(({ s, n }) => (
+            <button
+              key={s}
+              onClick={() => setFilter(filter === s ? "all" : s)}
+              className={`cursor-pointer border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-all ${
+                filter === s ? "border-navy bg-navy text-white" : "border-line bg-surface text-mut hover:border-line2 hover:text-ink"
+              }`}
+            >
+              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: STATUS_META[s].dot }} />
+              {STATUS_META[s].label} · {n}
+            </button>
+          ))}
+        </div>
+        <div className="relative lg:w-72">
+          <IconSearch size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Поиск: номер, контрагент, позиция"
+            className="w-full border border-line bg-surface py-2.5 pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-dim focus:border-brand"
+          />
+        </div>
+      </div>
+
+      {/* таблица */}
+      <div className="mt-4 overflow-x-auto border border-line bg-surface">
+        <table className="w-full min-w-[720px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-line bg-soft">
+              {["№ и дата", "Тип", "Контрагент", "Сумма", "Статус", ""].map((h, i) => (
+                <th key={i} className={`px-4 py-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-dim ${i === 3 ? "text-right" : ""}`}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {filtered.map((d, i) => {
+              const meta = STATUS_META[d.status];
+              return (
+                <tr
+                  key={d.id}
+                  onClick={() => onPreview(d.id)}
+                  className="fade-up group cursor-pointer transition-colors hover:bg-soft"
+                  style={{ animationDelay: `${Math.min(i * 35, 320)}ms` }}
+                >
+                  <td className="px-4 py-3.5">
+                    <span className="font-mono text-[13px] font-semibold text-ink">№ {d.number}</span>
+                    <span className="mt-0.5 block font-mono text-[10.5px] text-dim">{fmtDate(d.date)}</span>
+                  </td>
+                  <td className="px-4 py-3.5 text-[13px] text-mut">{TYPE_META[d.type].label}</td>
+                  <td className="max-w-[240px] truncate px-4 py-3.5 text-[13.5px] font-medium text-ink">{partyName(d.counterpartyId)}</td>
+                  <td className="px-4 py-3.5 text-right font-mono text-[13px] font-semibold text-ink">{fmtMoney(calc(d).total)}</td>
+                  <td className="px-4 py-3.5">
+                    <span className={`inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] ${meta.chip}`}>
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.dot }} />
+                      {meta.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                      {meta.next && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatus(d.id, meta.next!);
+                          }}
+                          className="flex cursor-pointer items-center gap-1.5 border border-brand/50 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-brand transition-all hover:bg-brand hover:text-white"
+                          title={`Перевести в статус «${meta.nextLabel}»`}
+                        >
+                          {meta.nextLabel} <IconArrow size={11} />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(d);
+                        }}
+                        className="cursor-pointer border border-line p-1.5 text-mut transition-colors hover:border-navy hover:text-navy"
+                        title="Изменить"
+                      >
+                        <IconPencil size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {filtered.length === 0 && (
+          <div className="p-12 text-center">
+            <p className="font-display text-[15px] font-bold text-ink">Ничего не нашлось</p>
+            <p className="mt-2 text-[13px] text-mut">Попробуйте сбросить фильтры или создайте новый документ</p>
+            <div className="mt-5 flex justify-center gap-3">
+              <button
+                onClick={() => {
+                  setQ("");
+                  setFilter("all");
+                }}
+                className="cursor-pointer border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-navy hover:text-navy"
+              >
+                сбросить
+              </button>
+              <button
+                onClick={onNew}
+                className="flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+              >
+                <IconPlus size={13} /> новый документ
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-3 font-mono text-[11px] text-dim">
+        показано {filtered.length} из {docs.length} · наведение на строку — быстрые действия
+      </p>
+    </div>
+  );
+}
