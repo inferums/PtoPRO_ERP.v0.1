@@ -170,6 +170,32 @@ function SettingsView({
           </p>
         </div>
 
+        <div className="border border-line bg-navy p-6 text-white">
+          <h3 className="font-display text-[14px] font-bold">Публикация</h3>
+          <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">github → cloudflare pages</p>
+          <ol className="mt-4 space-y-3 text-[12.5px] leading-relaxed text-white/80">
+            <li className="flex gap-3">
+              <span className="font-mono text-[11px] font-bold text-brand">01</span>
+              Залить проект в <span className="font-mono text-[11.5px] text-white">inferums/PtoPRO_ERP</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="font-mono text-[11px] font-bold text-brand">02</span>
+              Cloudflare Pages → Create → Connect to Git → выбрать репозиторий
+            </li>
+            <li className="flex gap-3">
+              <span className="font-mono text-[11px] font-bold text-brand">03</span>
+              <span>
+                сборка <span className="font-mono text-[11.5px] text-white">npm run build</span> · папка{" "}
+                <span className="font-mono text-[11.5px] text-white">dist</span>
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="font-mono text-[11px] font-bold text-brand">04</span>
+              Деплой — каждая следующая правка в репо обновляет сайт автоматически
+            </li>
+          </ol>
+        </div>
+
         <div className="border border-danger/30 bg-surface p-6">
           <h3 className="font-display text-[14px] font-bold text-danger">Сброс</h3>
           <p className="mt-2 text-[12.5px] leading-relaxed text-mut">Вернуть демо-данные, удалив все свои изменения.</p>
