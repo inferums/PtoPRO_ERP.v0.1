@@ -94,23 +94,38 @@ export function seedState(): State {
     ] },
   ];
 
-  const own: Own = {
-    name: "Индивидуальный предприниматель Иванов Иван Иванович",
-    short: "ИП Иванов И. И.",
-    inn: "771234567890",
-    address: "г. Москва, ул. Складочная, д. 1, стр. 5",
-    bank: "АО «АЛЬФА-БАНК» г. Москва",
-    bik: "044525593",
-    account: "40802810500000012345",
-    director: "Иванов И. И.",
-  };
-
-  return { docs, parties, own };
+  return { docs, parties, own: DEFAULT_OWN };
 }
 
-export function loadState(): State {
+export const DEFAULT_OWN: Own = {
+  name: "Индивидуальный предприниматель Иванов Иван Иванович",
+  short: "ИП Иванов И. И.",
+  inn: "771234567890",
+  address: "г. Москва, ул. Складочная, д. 1, стр. 5",
+  bank: "АО «АЛЬФА-БАНК» г. Москва",
+  bik: "044525593",
+  account: "40802810500000012345",
+  director: "Иванов И. И.",
+};
+
+/* чистый старт для свежезарегистрированных пользователей */
+export function emptyState(): State {
+  return { docs: [], parties: [], own: { ...DEFAULT_OWN } };
+}
+
+export function hasState(userId: string): boolean {
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    return localStorage.getItem(stateKey(userId)) !== null;
+  } catch {
+    return false;
+  }
+}
+
+const stateKey = (userId: string) => `${LS_KEY}:${userId}`;
+
+export function loadState(userId: string): State {
+  try {
+    const raw = localStorage.getItem(stateKey(userId));
     if (raw) {
       const parsed = JSON.parse(raw) as State;
       if (parsed && Array.isArray(parsed.docs) && Array.isArray(parsed.parties) && parsed.own) return parsed;
@@ -121,9 +136,9 @@ export function loadState(): State {
   return seedState();
 }
 
-export function saveState(s: State) {
+export function saveState(s: State, userId: string) {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(s));
+    localStorage.setItem(stateKey(userId), JSON.stringify(s));
   } catch {
     /* приватный режим — работаем в памяти */
   }

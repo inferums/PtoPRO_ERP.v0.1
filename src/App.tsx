@@ -3,6 +3,8 @@ import {
   loadState,
   saveState,
   seedState,
+  emptyState,
+  hasState,
   nextNumber,
   STATUS_META,
   type Doc,
@@ -12,6 +14,8 @@ import {
   type State,
   type View,
 } from "./lib/store";
+import { clearSession, loadSession, type Session, type User } from "./lib/auth";
+import AuthScreen from "./components/AuthScreen";
 import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
 import DocumentForm from "./components/DocumentForm";
@@ -25,6 +29,7 @@ import {
   IconSliders,
   IconPlus,
   IconDownload,
+  IconExit,
 } from "./components/icons";
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
@@ -231,14 +236,34 @@ function SettingsView({
 /* ---------- приложение ---------- */
 
 export default function App() {
-  const [state, setState] = useState<State>(loadState);
+  const [session, setSession] = useState<Session | null>(loadSession);
+  const [state, setState] = useState<State>(() => {
+    const s = loadSession();
+    return s ? loadState(s.userId) : emptyState();
+  });
   const [view, setView] = useState<View>("dashboard");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Doc | null | "new">(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
 
-  useEffect(() => saveState(state), [state]);
+  useEffect(() => {
+    if (session) saveState(state, session.userId);
+  }, [state, session]);
+
+  const handleAuthed = (user: User, seed: boolean) => {
+    if (seed) saveState(seedState(), user.id);
+    else if (!hasState(user.id)) saveState(emptyState(), user.id);
+    setSession({ userId: user.id, email: user.email });
+    setState(loadState(user.id));
+    setView("dashboard");
+    toast(seed ? "Демо-данные созданы — осматривайтесь" : `Добро пожаловать, ${user.name}`);
+  };
+
+  const logout = () => {
+    clearSession();
+    setSession(null);
+  };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
@@ -333,6 +358,27 @@ export default function App() {
   const previewDoc = previewId ? state.docs.find((d) => d.id === previewId) ?? null : null;
   const title = TITLES[view];
 
+  /* без сессии — только вход в систему */
+  if (!session) {
+    return (
+      <>
+        <AuthScreen onAuthed={handleAuthed} />
+        <div className="pointer-events-none fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-2">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className={`toast-in border-l-[3px] bg-navy px-4 py-3 font-mono text-[12px] text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
+                t.tone === "ok" ? "border-paid" : "border-danger"
+              }`}
+            >
+              {t.text}
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
+
   const navBtn = (n: (typeof NAV)[number], mobile = false) => {
     const active = view === n.id;
     return (
@@ -374,8 +420,19 @@ export default function App() {
         </div>
         <nav className="flex-1 space-y-1 px-3 pt-2">{NAV.map((n) => navBtn(n))}</nav>
         <div className="border-t border-white/10 px-5 py-4">
-          <p className="text-[12.5px] font-semibold text-white">{state.own.short}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-white/40">ИНН {state.own.inn ?? "—"}</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-[12.5px] font-semibold text-white">{session.email}</p>
+              <p className="mt-0.5 truncate font-mono text-[10px] text-white/40">{state.own.short}</p>
+            </div>
+            <button
+              onClick={logout}
+              title="Выйти из системы"
+              className="shrink-0 cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger"
+            >
+              <IconExit size={14} />
+            </button>
+          </div>
           {installEvt ? (
             <button
               onClick={install}
@@ -398,12 +455,21 @@ export default function App() {
             <Logo size={32} />
             <p className="font-display text-[13px] font-bold tracking-wide text-white">ИП Документы</p>
           </div>
-          <button
-            onClick={() => setEditing("new")}
-            className="flex cursor-pointer items-center gap-1.5 bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
-          >
-            <IconPlus size={12} /> документ
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditing("new")}
+              className="flex cursor-pointer items-center gap-1.5 bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
+            >
+              <IconPlus size={12} /> документ
+            </button>
+            <button
+              onClick={logout}
+              title="Выйти"
+              className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger"
+            >
+              <IconExit size={13} />
+            </button>
+          </div>
         </div>
         <div className="flex overflow-x-auto px-3">{NAV.map((n) => navBtn(n, true))}</div>
       </div>

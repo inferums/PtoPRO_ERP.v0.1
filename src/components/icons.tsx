@@ -114,6 +114,14 @@ export const IconCheck = (p: P) => (
   </Svg>
 );
 
+export const IconExit = (p: P) => (
+  <Svg {...p}>
+    <path d="M7.5 17.5H4.2a1.7 1.7 0 0 1-1.7-1.7V4.2a1.7 1.7 0 0 1 1.7-1.7h3.3" />
+    <path d="m13.3 14.2 4.2-4.2-4.2-4.2" />
+    <path d="M17.5 10H7.5" />
+  </Svg>
+);
+
 export function Logo({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
