@@ -11,7 +11,7 @@ import {
   VerticalAlign,
   WidthType,
 } from "docx";
-import { amountInWords, calc, fmtDate, fmtMoney, TYPE_META, type Doc, type Own, type Party } from "./store";
+import { amountInWords, calc, displayName, fmtDate, fmtMoney, TYPE_META, type Doc, type Own, type Party } from "./store";
 
 const INK = "12243C";
 const GREY = "5C6C84";
@@ -69,7 +69,8 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own)
           new TableCell({
             children: [
               new Paragraph({ spacing: { before: 60, after: 20 }, children: [run(own.bank)] }),
-              new Paragraph({ spacing: { after: 20 }, children: [run(`БИК ${own.bik}   ·   Счёт ${own.account}`)] }),
+              new Paragraph({ spacing: { after: 20 }, children: [run(`БИК ${own.bik}${own.corrAccount ? "   ·   Корр. счёт " + own.corrAccount : ""}`)] }),
+              new Paragraph({ spacing: { after: 20 }, children: [run(`Р/счёт ${own.account}`)] }),
             ],
           }),
         ],
@@ -136,13 +137,20 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own)
       : []),
     new Paragraph({
       spacing: { before: 700 },
-      children: [run(`Руководитель  ______________________  ${own.director}`)],
+      children: [run(`Руководитель  ______________________  ${displayName(own.director)}`)],
     }),
     new Paragraph({ spacing: { before: 200 }, children: [run("Бухгалтер  ______________________")] }),
+    /* колонтитул: наименование + контакты */
     new Paragraph({
       spacing: { before: 500 },
       alignment: AlignmentType.CENTER,
-      children: [run("Сформировано в системе «ИП Документооборот»", { size: 15, color: GREY })],
+      border: { top: { style: BorderStyle.SINGLE, size: 6, color: INK, space: 4 } },
+      children: [run(displayName(own.short), { size: 17, bold: true })],
+    }),
+    new Paragraph({
+      spacing: { before: 60 },
+      alignment: AlignmentType.CENTER,
+      children: [run([own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  "), { size: 15, color: GREY })],
     }),
   ];
 

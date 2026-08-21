@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import {
   amountInWords,
   calc,
+  displayName,
   fmtDate,
   fmtMoney,
   STATUS_META,
@@ -10,7 +11,7 @@ import {
   type Own,
   type Party,
 } from "../lib/store";
-import { IconArrow, IconClose, IconDownload, IconPencil, IconPrint } from "./icons";
+import { IconArrow, IconClose, IconCoin, IconDownload, IconPencil, IconPrint } from "./icons";
 
 function Stamp({ date, short }: { date: string; short: string }) {
   return (
@@ -30,19 +31,28 @@ export default function DocumentPreview({
   doc,
   party,
   own,
+  contract,
+  payments,
   onClose,
   onStatus,
   onEdit,
+  onAddPayment,
 }: {
   doc: Doc;
   party: Party | undefined;
   own: Own;
+  contract: { number: string; subject: string } | undefined;
+  payments: { id: string; date: string; amount: number; method: string }[];
   onClose: () => void;
   onStatus: (id: string, s: NonNullable<(typeof STATUS_META)[keyof typeof STATUS_META]["next"]>) => void;
   onEdit: (doc: Doc) => void;
+  onAddPayment: (amount: number) => void;
 }) {
   const meta = STATUS_META[doc.status];
   const { subtotal, vat, total } = calc(doc);
+  const paid = payments.reduce((s, p) => s + p.amount, 0);
+  const rest = Math.max(total - paid, 0);
+  const pct = total > 0 ? Math.min(Math.round((paid / total) * 100), 100) : 0;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -111,9 +121,15 @@ export default function DocumentPreview({
                 <div className="border-r border-ink/80 p-3">
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">БИК</span>
                   <p className="mt-0.5 font-mono">{own.bik}</p>
+                  {own.corrAccount && (
+                    <>
+                      <span className="mt-1.5 block font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Корр. счёт</span>
+                      <p className="mt-0.5 font-mono">{own.corrAccount}</p>
+                    </>
+                  )}
                 </div>
                 <div className="p-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Счёт</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Р/счёт</span>
                   <p className="mt-0.5 font-mono">{own.account}</p>
                 </div>
               </div>
@@ -124,6 +140,11 @@ export default function DocumentPreview({
             {TYPE_META[doc.type].title} № {doc.number}
           </h2>
           <p className="mt-1 text-[13.5px] text-mut">от {fmtDate(doc.date)}</p>
+          {contract && (
+            <p className="mt-2 text-[12.5px] text-mut">
+              Основание: <span className="font-semibold text-ink">договор № {contract.number}</span> — {contract.subject}
+            </p>
+          )}
 
           <div className="mt-7 text-[13px] leading-relaxed">
             <p>
@@ -186,9 +207,55 @@ export default function DocumentPreview({
             </p>
           </div>
 
-          <p className="mt-12 border-t border-line pt-4 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-dim">
+          {/* колонтитул: адрес · телефон · email · сайт */}
+          <div className="mt-12 border-t-2 border-ink pt-3.5">
+            <p className="text-center font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink">
+              {displayName(own.short)}
+            </p>
+            <p className="mt-1 text-center text-[11px] leading-relaxed text-mut">
+              {[own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  ") || "реквизиты не заполнены"}
+            </p>
+          </div>
+          <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-dim">
             сформировано в системе «ИП Документооборот» · статус: {meta.label.toLowerCase()}
           </p>
+        </div>
+
+        {/* рабочая панель оплат (не печатается) */}
+        <div className="mx-auto mt-6 w-[840px] max-w-full border border-white/15 bg-navy/60 p-5 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/50">Оплаты по документу</p>
+              <p className="mt-1.5 font-display text-[15px] font-bold text-white">
+                {fmtMoney(paid)} <span className="text-white/40">из</span> {fmtMoney(total)}
+              </p>
+            </div>
+            {rest > 0 ? (
+              <button
+                onClick={() => onAddPayment(rest)}
+                className="flex cursor-pointer items-center gap-2 bg-paid px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:brightness-110"
+              >
+                <IconCoin size={14} /> внести {fmtMoney(rest)}
+              </button>
+            ) : (
+              <span className="border border-paid/50 bg-paid/15 px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-paid">
+                оплачен полностью
+              </span>
+            )}
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden bg-white/10">
+            <div className="h-full bg-paid transition-all duration-700" style={{ width: `${pct}%` }} />
+          </div>
+          {payments.length > 0 && (
+            <div className="mt-3.5 space-y-1.5">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between font-mono text-[11.5px] text-white/70">
+                  <span>{fmtDate(p.date)} · {p.method}</span>
+                  <span className="font-semibold text-paid">+{fmtMoney(p.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

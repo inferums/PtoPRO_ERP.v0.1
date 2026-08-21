@@ -114,6 +114,29 @@ export const IconCheck = (p: P) => (
   </Svg>
 );
 
+export const IconContract = (p: P) => (
+  <Svg {...p}>
+    <path d="M4.5 2.8h8l3 3v11.4h-11V2.8z" />
+    <path d="M12.5 2.8v3h3" />
+    <path d="M7 11.5c.8-1.4 1.8-1.4 2.4-.4.5.9 1.6 1.4 2.6.2" />
+    <path d="M7 14.6h6" />
+  </Svg>
+);
+
+export const IconCoin = (p: P) => (
+  <Svg {...p}>
+    <circle cx="10" cy="10" r="6.6" />
+    <path d="M8 7.4h3a1.8 1.8 0 0 1 0 3.6H8v1.8M8 7.4v5.4M6.8 9.4h4.4" />
+  </Svg>
+);
+
+export const IconLetter = (p: P) => (
+  <Svg {...p}>
+    <rect x="2.8" y="4.6" width="14.4" height="10.8" rx="1.4" />
+    <path d="m3.4 5.6 6.6 5.2 6.6-5.2" />
+  </Svg>
+);
+
 export const IconExit = (p: P) => (
   <Svg {...p}>
     <path d="M7.5 17.5H4.2a1.7 1.7 0 0 1-1.7-1.7V4.2a1.7 1.7 0 0 1 1.7-1.7h3.3" />
