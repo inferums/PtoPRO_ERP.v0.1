@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import {
   amountInWords,
   calc,
+  displayName,
   fmtDate,
   fmtMoney,
   STATUS_META,
@@ -10,7 +11,7 @@ import {
   type Own,
   type Party,
 } from "../lib/store";
-import { IconArrow, IconClose, IconDownload, IconPencil, IconPrint } from "./icons";
+import { IconArrow, IconClose, IconCoin, IconDownload, IconPencil, IconPrint } from "./icons";
 
 function Stamp({ date, short }: { date: string; short: string }) {
   return (
@@ -30,19 +31,28 @@ export default function DocumentPreview({
   doc,
   party,
   own,
+  contract,
+  payments,
   onClose,
   onStatus,
   onEdit,
+  onAddPayment,
 }: {
   doc: Doc;
   party: Party | undefined;
   own: Own;
+  contract: { number: string; subject: string } | undefined;
+  payments: { id: string; date: string; amount: number; method: string }[];
   onClose: () => void;
   onStatus: (id: string, s: NonNullable<(typeof STATUS_META)[keyof typeof STATUS_META]["next"]>) => void;
   onEdit: (doc: Doc) => void;
+  onAddPayment: (amount: number) => void;
 }) {
   const meta = STATUS_META[doc.status];
   const { subtotal, vat, total } = calc(doc);
+  const paid = payments.reduce((s, p) => s + p.amount, 0);
+  const rest = Math.max(total - paid, 0);
+  const pct = total > 0 ? Math.min(Math.round((paid / total) * 100), 100) : 0;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -50,55 +60,10 @@ export default function DocumentPreview({
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const downloadHtml = () => {
-    const rows = doc.items
-      .map(
-        (it, i) =>
-          `<tr><td style="border:1px solid #9aa7b8;padding:7px 9px;text-align:center">${i + 1}</td>
-          <td style="border:1px solid #9aa7b8;padding:7px 9px">${it.name}</td>
-          <td style="border:1px solid #9aa7b8;padding:7px 9px;text-align:center">${it.qty}</td>
-          <td style="border:1px solid #9aa7b8;padding:7px 9px;text-align:center">${it.unit}</td>
-          <td style="border:1px solid #9aa7b8;padding:7px 9px;text-align:right">${fmtMoney(it.price)}</td>
-          <td style="border:1px solid #9aa7b8;padding:7px 9px;text-align:right">${fmtMoney(it.qty * it.price)}</td></tr>`
-      )
-      .join("");
-    const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8">
-<title>${TYPE_META[doc.type].short} № ${doc.number} от ${fmtDate(doc.date)}</title></head>
-<body style="font-family:'IBM Plex Sans',Arial,sans-serif;color:#12243c;max-width:780px;margin:24px auto;padding:0 16px;font-size:13px">
-<table style="width:100%;border-collapse:collapse"><tr>
-<td style="border:1px solid #12243c;padding:10px;width:58%;vertical-align:top">
-<b>Поставщик:</b> ${own.name}<br>ИНН ${own.inn ?? "—"}${own.address ? "<br>" + own.address : ""}</td>
-<td style="border:1px solid #12243c;padding:10px;vertical-align:top">${own.bank}<br>
-<table style="width:100%;border-collapse:collapse;margin-top:6px"><tr>
-<td style="border:1px solid #12243c;padding:4px 8px;width:40%">БИК</td><td style="border:1px solid #12243c;padding:4px 8px">${own.bik}</td></tr>
-<tr><td style="border:1px solid #12243c;padding:4px 8px">Счёт</td><td style="border:1px solid #12243c;padding:4px 8px">${own.account}</td></tr></table></td>
-</tr></table>
-<h1 style="font-size:22px;letter-spacing:0.06em;margin:26px 0 2px">${TYPE_META[doc.type].title} № ${doc.number}</h1>
-<p style="margin:0">от ${fmtDate(doc.date)}</p>
-<p style="margin:18px 0 0"><b>Покупатель:</b> ${party?.name ?? "—"}${party?.inn ? ", ИНН " + party.inn : ""}${party?.person ? "<br>Контактное лицо: " + party.person : ""}</p>
-<table style="width:100%;border-collapse:collapse;margin-top:20px">
-<tr style="background:#f2f6fb">${["№", "Наименование", "Кол-во", "Ед.", "Цена", "Сумма"].map((h) => `<th style="border:1px solid #9aa7b8;padding:7px 9px;text-align:${h === "Наименование" ? "left" : "center"}">${h}</th>`).join("")}</tr>
-${rows}</table>
-<div style="margin-left:auto;width:300px;margin-top:14px;font-size:13px">
-<p style="margin:4px 0;display:flex;justify-content:space-between"><span>Итого:</span><b>${fmtMoney(subtotal)}</b></p>
-<p style="margin:4px 0;display:flex;justify-content:space-between"><span>${doc.vat ? "в т.ч. НДС 20 %:" : "НДС:"}</span><b>${doc.vat ? fmtMoney(vat) : "не облагается"}</b></p>
-<p style="margin:8px 0 0;display:flex;justify-content:space-between;border-top:2px solid #12243c;padding-top:8px;font-size:15px"><span>ВСЕГО К ОПЛАТЕ:</span><b>${fmtMoney(total)}</b></p></div>
-<p style="margin:18px 0 0;font-style:italic;color:#5c6c84">${amountInWords(total)}</p>
-${doc.note ? `<p style="margin:14px 0 0"><b>Примечание:</b> ${doc.note}</p>` : ""}
-${doc.status === "paid" ? `<p style="margin:30px 0 0;color:#2743c7;font-weight:bold;letter-spacing:0.14em;transform:rotate(-8deg);display:inline-block;border:3px double #2743c7;padding:10px 22px">ОПЛАЧЕНО · ${fmtDate(doc.date)}</p>` : ""}
-<table style="width:100%;margin-top:44px"><tr>
-<td style="width:50%">Руководитель&nbsp;&nbsp;<span style="border-bottom:1px dotted #12243c;display:inline-block;width:160px"></span>&nbsp;&nbsp;${own.director}</td>
-<td>Бухгалтер&nbsp;&nbsp;<span style="border-bottom:1px dotted #12243c;display:inline-block;width:160px"></span></td></tr></table>
-</body></html>`;
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${doc.type}-${doc.number}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 800);
+  /* библиотека docx подгружается только по нажатию — не тянет основной бандл */
+  const downloadWord = async () => {
+    const { downloadDocx } = await import("../lib/docx");
+    await downloadDocx(doc, party, own);
   };
 
   return (
@@ -127,8 +92,8 @@ ${doc.status === "paid" ? `<p style="margin:30px 0 0;color:#2743c7;font-weight:b
             <button onClick={() => window.print()} className="flex cursor-pointer items-center gap-2 border border-white/20 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-white/80 transition-colors hover:border-white/50 hover:text-white">
               <IconPrint size={13} /> печать
             </button>
-            <button onClick={downloadHtml} className="flex cursor-pointer items-center gap-2 border border-white/20 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-white/80 transition-colors hover:border-white/50 hover:text-white">
-              <IconDownload size={13} /> html
+            <button onClick={() => void downloadWord()} className="flex cursor-pointer items-center gap-2 border border-amber/50 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-amber transition-colors hover:border-amber hover:bg-amber/10">
+              <IconDownload size={13} /> word
             </button>
             <button onClick={onClose} className="cursor-pointer border border-white/20 p-2 text-white/70 transition-colors hover:border-danger hover:text-danger" title="Закрыть">
               <IconClose size={14} />
@@ -156,9 +121,15 @@ ${doc.status === "paid" ? `<p style="margin:30px 0 0;color:#2743c7;font-weight:b
                 <div className="border-r border-ink/80 p-3">
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">БИК</span>
                   <p className="mt-0.5 font-mono">{own.bik}</p>
+                  {own.corrAccount && (
+                    <>
+                      <span className="mt-1.5 block font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Корр. счёт</span>
+                      <p className="mt-0.5 font-mono">{own.corrAccount}</p>
+                    </>
+                  )}
                 </div>
                 <div className="p-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Счёт</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Р/счёт</span>
                   <p className="mt-0.5 font-mono">{own.account}</p>
                 </div>
               </div>
@@ -169,6 +140,11 @@ ${doc.status === "paid" ? `<p style="margin:30px 0 0;color:#2743c7;font-weight:b
             {TYPE_META[doc.type].title} № {doc.number}
           </h2>
           <p className="mt-1 text-[13.5px] text-mut">от {fmtDate(doc.date)}</p>
+          {contract && (
+            <p className="mt-2 text-[12.5px] text-mut">
+              Основание: <span className="font-semibold text-ink">договор № {contract.number}</span> — {contract.subject}
+            </p>
+          )}
 
           <div className="mt-7 text-[13px] leading-relaxed">
             <p>
@@ -231,9 +207,55 @@ ${doc.status === "paid" ? `<p style="margin:30px 0 0;color:#2743c7;font-weight:b
             </p>
           </div>
 
-          <p className="mt-12 border-t border-line pt-4 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-dim">
+          {/* колонтитул: адрес · телефон · email · сайт */}
+          <div className="mt-12 border-t-2 border-ink pt-3.5">
+            <p className="text-center font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink">
+              {displayName(own.short)}
+            </p>
+            <p className="mt-1 text-center text-[11px] leading-relaxed text-mut">
+              {[own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  ") || "реквизиты не заполнены"}
+            </p>
+          </div>
+          <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-dim">
             сформировано в системе «ИП Документооборот» · статус: {meta.label.toLowerCase()}
           </p>
+        </div>
+
+        {/* рабочая панель оплат (не печатается) */}
+        <div className="mx-auto mt-6 w-[840px] max-w-full border border-white/15 bg-navy/60 p-5 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/50">Оплаты по документу</p>
+              <p className="mt-1.5 font-display text-[15px] font-bold text-white">
+                {fmtMoney(paid)} <span className="text-white/40">из</span> {fmtMoney(total)}
+              </p>
+            </div>
+            {rest > 0 ? (
+              <button
+                onClick={() => onAddPayment(rest)}
+                className="flex cursor-pointer items-center gap-2 bg-paid px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:brightness-110"
+              >
+                <IconCoin size={14} /> внести {fmtMoney(rest)}
+              </button>
+            ) : (
+              <span className="border border-paid/50 bg-paid/15 px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-paid">
+                оплачен полностью
+              </span>
+            )}
+          </div>
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden bg-white/10">
+            <div className="h-full bg-paid transition-all duration-700" style={{ width: `${pct}%` }} />
+          </div>
+          {payments.length > 0 && (
+            <div className="mt-3.5 space-y-1.5">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between font-mono text-[11.5px] text-white/70">
+                  <span>{fmtDate(p.date)} · {p.method}</span>
+                  <span className="font-semibold text-paid">+{fmtMoney(p.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

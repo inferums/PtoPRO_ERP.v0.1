@@ -20,12 +20,14 @@ const emptyItem = (): LineItem => ({ id: uid(), name: "", qty: 1, unit: "усл�
 export default function DocumentForm({
   initial,
   parties,
+  contracts,
   fallbackNumber,
   onSave,
   onClose,
 }: {
   initial: Doc | null;
   parties: Party[];
+  contracts: { id: string; number: string; subject: string }[];
   fallbackNumber: number;
   onSave: (doc: Doc) => void;
   onClose: () => void;
@@ -33,6 +35,7 @@ export default function DocumentForm({
   const [type, setType] = useState<DocType>(initial?.type ?? "invoice");
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [counterpartyId, setCounterpartyId] = useState(initial?.counterpartyId ?? parties[0]?.id ?? "");
+  const [contractId, setContractId] = useState(initial?.contractId ?? "");
   const [vat, setVat] = useState(initial?.vat ?? false);
   const [note, setNote] = useState(initial?.note ?? "");
   const [items, setItems] = useState<LineItem[]>(initial ? initial.items.map((i) => ({ ...i })) : [emptyItem()]);
@@ -66,6 +69,7 @@ export default function DocumentForm({
       status: initial?.status ?? "draft",
       date,
       counterpartyId,
+      contractId: contractId || undefined,
       items,
       vat,
       note: note.trim() || undefined,
@@ -92,7 +96,7 @@ export default function DocumentForm({
         <div className="grid gap-5 px-6 py-6 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <span className={lbl}>Тип документа</span>
-            <div className="grid grid-cols-3 gap-1 border border-line bg-soft p-1">
+            <div className="grid grid-cols-2 gap-1 border border-line bg-soft p-1">
               {(Object.keys(TYPE_META) as DocType[]).map((t) => (
                 <button
                   key={t}
@@ -122,6 +126,16 @@ export default function DocumentForm({
               ))}
             </select>
             {errors.party && <p className="mt-1.5 text-[12px] font-medium text-danger">{errors.party}</p>}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className={lbl} htmlFor="doc-contract">Договор (основание)</label>
+            <select id="doc-contract" value={contractId} onChange={(e) => setContractId(e.target.value)} className={`${inp} cursor-pointer`}>
+              <option value="">— без договора —</option>
+              {contracts.map((c) => (
+                <option key={c.id} value={c.id}>№ {c.number} · {c.subject}</option>
+              ))}
+            </select>
           </div>
 
           <div className="sm:col-span-2">

@@ -3,20 +3,31 @@ import {
   loadState,
   saveState,
   seedState,
+  emptyState,
   nextNumber,
+  todayISO,
+  uid,
   STATUS_META,
+  type Contract,
   type Doc,
   type DocStatus,
+  type Letter,
   type Own,
   type Party,
+  type Payment,
   type State,
   type View,
 } from "./lib/store";
+import { clearSession, loadSession, type Session, type User } from "./lib/auth";
+import AuthScreen from "./components/AuthScreen";
 import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
 import DocumentForm from "./components/DocumentForm";
 import DocumentPreview from "./components/DocumentPreview";
 import Counterparties from "./components/Counterparties";
+import Contracts from "./components/Contracts";
+import Payments from "./components/Payments";
+import Letters from "./components/Letters";
 import {
   Logo,
   IconGrid,
@@ -25,6 +36,10 @@ import {
   IconSliders,
   IconPlus,
   IconDownload,
+  IconExit,
+  IconContract,
+  IconCoin,
+  IconLetter,
 } from "./components/icons";
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
@@ -33,15 +48,21 @@ type Toast = { id: number; text: string; tone: "ok" | "err" };
 const NAV: { id: View; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
   { id: "dashboard", label: "Обзор", icon: (p) => <IconGrid {...p} /> },
   { id: "docs", label: "Документы", icon: (p) => <IconDoc {...p} /> },
+  { id: "contracts", label: "Договоры", icon: (p) => <IconContract {...p} /> },
+  { id: "payments", label: "Оплаты", icon: (p) => <IconCoin {...p} /> },
+  { id: "letters", label: "Письма", icon: (p) => <IconLetter {...p} /> },
   { id: "parties", label: "Контрагенты", icon: (p) => <IconPeople {...p} /> },
   { id: "settings", label: "Реквизиты", icon: (p) => <IconSliders {...p} /> },
 ];
 
 const TITLES: Record<View, { t: string; s: string }> = {
   dashboard: { t: "Обзор", s: "сводка по документам и оплатам" },
-  docs: { t: "Документы", s: "счета · акты · договоры" },
+  docs: { t: "Документы", s: "счета · акты" },
+  contracts: { t: "Договоры", s: "действующие соглашения с контрагентами" },
+  payments: { t: "Оплаты", s: "полученные платежи по документам" },
+  letters: { t: "Письма", s: "входящая и исходящая переписка" },
   parties: { t: "Контрагенты", s: "база покупателей и заказчиков" },
-  settings: { t: "Реквизиты", s: "данные ИП для шапки документов" },
+  settings: { t: "Реквизиты", s: "данные ИП для шапки и колонтитулов" },
 };
 
 /* ---------- реквизиты ---------- */
@@ -90,13 +111,29 @@ function SettingsView({
             <label className={lbl}>Адрес</label>
             <input value={f.address ?? ""} onChange={set("address")} className={inp} />
           </div>
-          <div className="sm:col-span-2">
+          <div>
+            <label className={lbl}>Телефон (колонтитул)</label>
+            <input value={f.phone ?? ""} onChange={set("phone")} className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>Email (колонтитул)</label>
+            <input value={f.email ?? ""} onChange={set("email")} className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>Сайт (колонтитул)</label>
+            <input value={f.website ?? ""} onChange={set("website")} className={inp} />
+          </div>
+          <div>
             <label className={lbl}>Банк</label>
             <input value={f.bank} onChange={set("bank")} className={inp} />
           </div>
           <div>
             <label className={lbl}>БИК</label>
             <input value={f.bik} onChange={set("bik")} className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>Корр. счёт</label>
+            <input value={f.corrAccount ?? ""} onChange={set("corrAccount")} className={inp} />
           </div>
           <div>
             <label className={lbl}>Расчётный счёт</label>
@@ -231,14 +268,34 @@ function SettingsView({
 /* ---------- приложение ---------- */
 
 export default function App() {
-  const [state, setState] = useState<State>(loadState);
+  const [session, setSession] = useState<Session | null>(loadSession);
+  const [state, setState] = useState<State>(() => {
+    const s = loadSession();
+    return s ? loadState(s.userId) : emptyState();
+  });
   const [view, setView] = useState<View>("dashboard");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Doc | null | "new">(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
 
-  useEffect(() => saveState(state), [state]);
+  useEffect(() => {
+    if (session) saveState(session.userId, state);
+  }, [state, session]);
+
+  const handleAuthed = (user: User, seed: boolean) => {
+    if (seed) saveState(user.id, seedState());
+    else saveState(user.id, loadState(user.id));
+    setSession({ userId: user.id, email: user.email });
+    setState(loadState(user.id));
+    setView("dashboard");
+    toast(seed ? "Демо-данные созданы — осматривайтесь" : `Добро пожаловать, ${user.name}`);
+  };
+
+  const logout = () => {
+    clearSession();
+    setSession(null);
+  };
 
   useEffect(() => {
     if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
@@ -294,6 +351,43 @@ export default function App() {
     if (p) toast(`«${p.name}» удалён из базы`);
   };
 
+  const upsertContract = (c: Contract) => {
+    setState((st) => {
+      const exists = st.contracts.some((x) => x.id === c.id);
+      return { ...st, contracts: exists ? st.contracts.map((x) => (x.id === c.id ? c : x)) : [...st.contracts, c] };
+    });
+    toast(`Договор № ${c.number} сохранён`);
+  };
+
+  const deleteContract = (id: string) => {
+    const c = state.contracts.find((x) => x.id === id);
+    setState((st) => ({
+      ...st,
+      contracts: st.contracts.filter((x) => x.id !== id),
+      docs: st.docs.map((d) => (d.contractId === id ? { ...d, contractId: undefined } : d)),
+    }));
+    if (c) toast(`Договор № ${c.number} удалён, ссылки очищены`);
+  };
+
+  const addPayment = (p: Payment) => {
+    setState((st) => {
+      const doc = st.docs.find((d) => d.id === p.docId);
+      const alreadyPaid = st.payments.filter((x) => x.docId === p.docId).reduce((s, x) => s + x.amount, 0);
+      const willBePaid = doc ? alreadyPaid + p.amount >= Math.round(doc.items.reduce((s, it) => s + it.qty * it.price, 0)) : false;
+      return {
+        ...st,
+        payments: [...st.payments, p],
+        docs: willBePaid ? st.docs.map((d) => (d.id === p.docId ? { ...d, status: "paid" as DocStatus } : d)) : st.docs,
+      };
+    });
+    toast(`Оплата ${p.amount.toLocaleString("ru-RU")} ₽ записана`);
+  };
+
+  const addLetter = (l: Letter) => {
+    setState((st) => ({ ...st, letters: [...st.letters, l] }));
+    toast(`Письмо «${l.subject}» сохранено`);
+  };
+
   const exportBackup = () => {
     const date = new Date().toISOString().slice(0, 10);
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -316,7 +410,14 @@ export default function App() {
         if (!Array.isArray(parsed.docs) || !Array.isArray(parsed.parties) || !parsed.own) {
           throw new Error("bad shape");
         }
-        setState({ docs: parsed.docs, parties: parsed.parties, own: parsed.own });
+        setState({
+          docs: parsed.docs,
+          parties: parsed.parties,
+          contracts: Array.isArray(parsed.contracts) ? parsed.contracts : [],
+          payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+          letters: Array.isArray(parsed.letters) ? parsed.letters : [],
+          own: parsed.own,
+        });
         toast(`Импортировано: ${parsed.docs.length} документов, ${parsed.parties.length} контрагентов`);
       })
       .catch(() => toast("Файл не похож на резервную копию — импорт отменён", "err"));
@@ -332,6 +433,27 @@ export default function App() {
 
   const previewDoc = previewId ? state.docs.find((d) => d.id === previewId) ?? null : null;
   const title = TITLES[view];
+
+  /* без сессии — только вход в систему */
+  if (!session) {
+    return (
+      <>
+        <AuthScreen onAuthed={handleAuthed} />
+        <div className="pointer-events-none fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-2">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className={`toast-in border-l-[3px] bg-navy px-4 py-3 font-mono text-[12px] text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
+                t.tone === "ok" ? "border-paid" : "border-danger"
+              }`}
+            >
+              {t.text}
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   const navBtn = (n: (typeof NAV)[number], mobile = false) => {
     const active = view === n.id;
@@ -374,8 +496,19 @@ export default function App() {
         </div>
         <nav className="flex-1 space-y-1 px-3 pt-2">{NAV.map((n) => navBtn(n))}</nav>
         <div className="border-t border-white/10 px-5 py-4">
-          <p className="text-[12.5px] font-semibold text-white">{state.own.short}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-white/40">ИНН {state.own.inn ?? "—"}</p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-[12.5px] font-semibold text-white">{session.email}</p>
+              <p className="mt-0.5 truncate font-mono text-[10px] text-white/40">{state.own.short}</p>
+            </div>
+            <button
+              onClick={logout}
+              title="Выйти из системы"
+              className="shrink-0 cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger"
+            >
+              <IconExit size={14} />
+            </button>
+          </div>
           {installEvt ? (
             <button
               onClick={install}
@@ -398,12 +531,21 @@ export default function App() {
             <Logo size={32} />
             <p className="font-display text-[13px] font-bold tracking-wide text-white">ИП Документы</p>
           </div>
-          <button
-            onClick={() => setEditing("new")}
-            className="flex cursor-pointer items-center gap-1.5 bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
-          >
-            <IconPlus size={12} /> документ
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditing("new")}
+              className="flex cursor-pointer items-center gap-1.5 bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
+            >
+              <IconPlus size={12} /> документ
+            </button>
+            <button
+              onClick={logout}
+              title="Выйти"
+              className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger"
+            >
+              <IconExit size={13} />
+            </button>
+          </div>
         </div>
         <div className="flex overflow-x-auto px-3">{NAV.map((n) => navBtn(n, true))}</div>
       </div>
@@ -455,6 +597,19 @@ export default function App() {
                 onStatus={setStatus}
               />
             )}
+            {view === "contracts" && (
+              <Contracts
+                contracts={state.contracts}
+                parties={state.parties}
+                docs={state.docs}
+                onUpsert={upsertContract}
+                onDelete={deleteContract}
+              />
+            )}
+            {view === "payments" && (
+              <Payments payments={state.payments} docs={state.docs} parties={state.parties} onAdd={addPayment} />
+            )}
+            {view === "letters" && <Letters letters={state.letters} parties={state.parties} onAdd={addLetter} />}
             {view === "parties" && (
               <Counterparties parties={state.parties} docs={state.docs} onUpsert={upsertParty} onDelete={deleteParty} />
             )}
@@ -483,12 +638,20 @@ export default function App() {
           doc={previewDoc}
           party={state.parties.find((p) => p.id === previewDoc.counterpartyId)}
           own={state.own}
+          contract={(() => {
+            const c = state.contracts.find((x) => x.id === previewDoc.contractId);
+            return c ? { number: c.number, subject: c.subject } : undefined;
+          })()}
+          payments={state.payments.filter((p) => p.docId === previewDoc.id)}
           onClose={() => setPreviewId(null)}
           onStatus={setStatus}
           onEdit={(d) => {
             setPreviewId(null);
             setEditing(d);
           }}
+          onAddPayment={(amount) =>
+            addPayment({ id: uid(), docId: previewDoc.id, date: todayISO(), amount, method: "Банковский перевод" })
+          }
         />
       )}
 
@@ -496,6 +659,7 @@ export default function App() {
         <DocumentForm
           initial={editing === "new" ? null : editing}
           parties={state.parties}
+          contracts={state.contracts}
           fallbackNumber={nextNumber(state.docs)}
           onSave={saveDoc}
           onClose={() => setEditing(null)}

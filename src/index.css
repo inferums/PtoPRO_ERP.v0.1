@@ -133,6 +133,17 @@ body {
   animation: pulseSoft 2.4s ease-in-out infinite;
 }
 
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(4px); }
+}
+.shake {
+  animation: shakeX 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 @keyframes overlayIn {
   from {
     opacity: 0;
@@ -199,7 +210,8 @@ body {
   .grow-y,
   .pulse-soft,
   .overlay-in,
-  .modal-in {
+  .modal-in,
+  .shake {
     animation: none !important;
   }
   * {
