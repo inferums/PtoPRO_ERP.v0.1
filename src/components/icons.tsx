@@ -4,16 +4,7 @@ type P = { size?: number; className?: string };
 
 function Svg({ size = 18, className = "", children }: P & { children: ReactNode }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      className={className}
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.7} className={className} aria-hidden="true">
       {children}
     </svg>
   );
@@ -33,6 +24,29 @@ export const IconDoc = (p: P) => (
     <path d="M5 2.6h7.2l3.2 3.2v11.6H5V2.6z" />
     <path d="M12.2 2.6v3.2h3.2" />
     <path d="M7.6 10h5M7.6 13h5" />
+  </Svg>
+);
+
+export const IconContract = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 2.8h9.4l2.8 2.8v11.6H4V2.8z" />
+    <path d="M13.4 2.8v2.8h2.8" />
+    <path d="M6.6 9h7M6.6 11.6h7" />
+    <path d="M6.6 14.6c1-.9 1.8.3 2.8-.4" />
+  </Svg>
+);
+
+export const IconCoin = (p: P) => (
+  <Svg {...p}>
+    <circle cx="10" cy="10" r="6.8" />
+    <path d="M10 6.4v7.2M7.8 8.2h3.4a1.7 1.7 0 1 1 0 3.4H7.8" />
+  </Svg>
+);
+
+export const IconLetter = (p: P) => (
+  <Svg {...p}>
+    <rect x="2.8" y="4.6" width="14.4" height="10.8" />
+    <path d="m3.4 5.4 6.6 5.4 6.6-5.4" />
   </Svg>
 );
 
@@ -108,40 +122,10 @@ export const IconSearch = (p: P) => (
   </Svg>
 );
 
-export const IconCheck = (p: P) => (
-  <Svg {...p}>
-    <path d="m4 10.5 4 4 8-9" />
-  </Svg>
-);
-
-export const IconContract = (p: P) => (
-  <Svg {...p}>
-    <path d="M4.5 2.8h8l3 3v11.4h-11V2.8z" />
-    <path d="M12.5 2.8v3h3" />
-    <path d="M7 11.5c.8-1.4 1.8-1.4 2.4-.4.5.9 1.6 1.4 2.6.2" />
-    <path d="M7 14.6h6" />
-  </Svg>
-);
-
-export const IconCoin = (p: P) => (
-  <Svg {...p}>
-    <circle cx="10" cy="10" r="6.6" />
-    <path d="M8 7.4h3a1.8 1.8 0 0 1 0 3.6H8v1.8M8 7.4v5.4M6.8 9.4h4.4" />
-  </Svg>
-);
-
-export const IconLetter = (p: P) => (
-  <Svg {...p}>
-    <rect x="2.8" y="4.6" width="14.4" height="10.8" rx="1.4" />
-    <path d="m3.4 5.6 6.6 5.2 6.6-5.2" />
-  </Svg>
-);
-
 export const IconExit = (p: P) => (
   <Svg {...p}>
-    <path d="M7.5 17.5H4.2a1.7 1.7 0 0 1-1.7-1.7V4.2a1.7 1.7 0 0 1 1.7-1.7h3.3" />
-    <path d="m13.3 14.2 4.2-4.2-4.2-4.2" />
-    <path d="M17.5 10H7.5" />
+    <path d="M8 3.4H3.4v13.2H8" />
+    <path d="M12.6 6.8 16 10l-3.4 3.2M16 10H7.6" />
   </Svg>
 );
 
@@ -149,11 +133,12 @@ export function Logo({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <rect width="40" height="40" rx="9" fill="#1E88E5" />
-      <path d="M12.5 8.5h10L28.5 14.5V31.5h-16V8.5z" fill="#fff" />
-      <path d="M22.5 8.5v6h6" stroke="#BBDCF8" strokeWidth="1.4" />
-      <path d="M15.8 18.5h8.4M15.8 22h8.4M15.8 25.5h5" stroke="#9CC1E8" strokeWidth="1.6" />
-      <circle cx="27.4" cy="26.8" r="5.4" fill="#0E2440" />
-      <path d="m25 26.9 1.7 1.7 3.1-3.4" stroke="#4CC38A" strokeWidth="1.8" fill="none" />
+      <path d="M12 9h11l5 5v17H12z" fill="#fff" />
+      <path d="M23 9v5h5z" fill="#BBDEFB" />
+      <rect x="15" y="17.5" width="10" height="1.8" rx="0.9" fill="#90A4AE" />
+      <rect x="15" y="21" width="10" height="1.8" rx="0.9" fill="#B0BEC5" />
+      <circle cx="24.5" cy="26.5" r="3.6" stroke="#FFB300" strokeWidth="1.4" />
+      <path d="m23 26.6 1.2 1.2 2-2.4" stroke="#FFB300" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

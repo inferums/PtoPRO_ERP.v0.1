@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   loadState,
   saveState,
   seedState,
   emptyState,
+  hasState,
   nextNumber,
   todayISO,
   uid,
   STATUS_META,
+  CONTRACT_STATUS_META,
   type Contract,
+  type ContractStatus,
   type Doc,
   type DocStatus,
   type Letter,
@@ -24,28 +27,29 @@ import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
 import DocumentForm from "./components/DocumentForm";
 import DocumentPreview from "./components/DocumentPreview";
-import Counterparties from "./components/Counterparties";
 import Contracts from "./components/Contracts";
+import ContractDetail from "./components/ContractDetail";
 import Payments from "./components/Payments";
 import Letters from "./components/Letters";
+import Counterparties from "./components/Counterparties";
 import {
   Logo,
   IconGrid,
   IconDoc,
+  IconContract,
+  IconCoin,
+  IconLetter,
   IconPeople,
   IconSliders,
   IconPlus,
   IconDownload,
   IconExit,
-  IconContract,
-  IconCoin,
-  IconLetter,
 } from "./components/icons";
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 type Toast = { id: number; text: string; tone: "ok" | "err" };
 
-const NAV: { id: View; label: string; icon: (p: { size?: number }) => React.ReactNode }[] = [
+const NAV: { id: View; label: string; icon: (p: { size?: number }) => ReactNode }[] = [
   { id: "dashboard", label: "Обзор", icon: (p) => <IconGrid {...p} /> },
   { id: "docs", label: "Документы", icon: (p) => <IconDoc {...p} /> },
   { id: "contracts", label: "Договоры", icon: (p) => <IconContract {...p} /> },
@@ -92,7 +96,7 @@ function SettingsView({
     <div className="fade-up grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
       <div className="border border-line bg-surface p-6 md:p-7">
         <h3 className="font-display text-[15px] font-bold text-ink">Реквизиты поставщика</h3>
-        <p className="mt-1 text-[12.5px] text-mut">Эти данные попадают в шапку каждого счёта, акта и договора</p>
+        <p className="mt-1 text-[12.5px] text-mut">Эти данные попадают в шапку и колонтитул каждого счёта, акта и договора</p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -119,11 +123,11 @@ function SettingsView({
             <label className={lbl}>Email (колонтитул)</label>
             <input value={f.email ?? ""} onChange={set("email")} className={inp} />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className={lbl}>Сайт (колонтитул)</label>
             <input value={f.website ?? ""} onChange={set("website")} className={inp} />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className={lbl}>Банк</label>
             <input value={f.bank} onChange={set("bank")} className={inp} />
           </div>
@@ -170,7 +174,7 @@ function SettingsView({
           <h3 className="font-display text-[14px] font-bold text-ink">Резервные копии</h3>
           <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
             Вся база выгружается одним JSON-файлом — переносите между браузерами и устройствами,
-            пока данные живут в localStorage. Это «план Б» до подключения облачной базы.
+            пока данные живут в localStorage.
           </p>
           <div className="mt-4 flex flex-wrap gap-2.5">
             <button
@@ -205,32 +209,6 @@ function SettingsView({
             В Chrome и Edge кнопка «Установить» появится в адресной строке, на Android — системный диалог.
             На iPhone: Safari → «Поделиться» → «На экран „Домой"».
           </p>
-        </div>
-
-        <div className="border border-line bg-navy p-6 text-white">
-          <h3 className="font-display text-[14px] font-bold">Публикация</h3>
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-white/45">github → cloudflare pages</p>
-          <ol className="mt-4 space-y-3 text-[12.5px] leading-relaxed text-white/80">
-            <li className="flex gap-3">
-              <span className="font-mono text-[11px] font-bold text-brand">01</span>
-              Залить проект в <span className="font-mono text-[11.5px] text-white">inferums/PtoPRO_ERP</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="font-mono text-[11px] font-bold text-brand">02</span>
-              Cloudflare Pages → Create → Connect to Git → выбрать репозиторий
-            </li>
-            <li className="flex gap-3">
-              <span className="font-mono text-[11px] font-bold text-brand">03</span>
-              <span>
-                сборка <span className="font-mono text-[11.5px] text-white">npm run build</span> · папка{" "}
-                <span className="font-mono text-[11.5px] text-white">dist</span>
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="font-mono text-[11px] font-bold text-brand">04</span>
-              Деплой — каждая следующая правка в репо обновляет сайт автоматически
-            </li>
-          </ol>
         </div>
 
         <div className="border border-danger/30 bg-surface p-6">
@@ -275,17 +253,24 @@ export default function App() {
   });
   const [view, setView] = useState<View>("dashboard");
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [contractId, setContractId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Doc | null | "new">(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
 
   useEffect(() => {
-    if (session) saveState(session.userId, state);
+    if (session) saveState(state, session.userId);
   }, [state, session]);
 
+  const toast = (text: string, tone: "ok" | "err" = "ok") => {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t, { id, text, tone }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
+  };
+
   const handleAuthed = (user: User, seed: boolean) => {
-    if (seed) saveState(user.id, seedState());
-    else saveState(user.id, loadState(user.id));
+    if (seed) saveState(seedState(), user.id);
+    else if (!hasState(user.id)) saveState(emptyState(), user.id);
     setSession({ userId: user.id, email: user.email });
     setState(loadState(user.id));
     setView("dashboard");
@@ -295,6 +280,9 @@ export default function App() {
   const logout = () => {
     clearSession();
     setSession(null);
+    setPreviewId(null);
+    setContractId(null);
+    setEditing(null);
   };
 
   useEffect(() => {
@@ -309,21 +297,11 @@ export default function App() {
     return () => window.removeEventListener("beforeinstallprompt", h);
   }, []);
 
-  const toast = (text: string, tone: "ok" | "err" = "ok") => {
-    const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
-  };
-
   const setStatus = (id: string, s: DocStatus) => {
     const doc = state.docs.find((d) => d.id === id);
     setState((st) => ({ ...st, docs: st.docs.map((d) => (d.id === id ? { ...d, status: s } : d)) }));
     if (doc) {
-      toast(
-        s === "paid"
-          ? `№ ${doc.number} оплачен — печать поставлена`
-          : `№ ${doc.number}: «${STATUS_META[s].label}»`
-      );
+      toast(s === "paid" ? `№ ${doc.number} оплачен — печать поставлена` : `№ ${doc.number}: «${STATUS_META[s].label}»`);
     }
   };
 
@@ -346,6 +324,10 @@ export default function App() {
   };
 
   const deleteParty = (id: string) => {
+    if (state.docs.some((d) => d.counterpartyId === id)) {
+      toast("Нельзя удалить: по контрагенту есть документы", "err");
+      return;
+    }
     const p = state.parties.find((x) => x.id === id);
     setState((st) => ({ ...st, parties: st.parties.filter((x) => x.id !== id) }));
     if (p) toast(`«${p.name}» удалён из базы`);
@@ -359,21 +341,28 @@ export default function App() {
     toast(`Договор № ${c.number} сохранён`);
   };
 
-  const deleteContract = (id: string) => {
+  const setContractStatus = (id: string, s: ContractStatus) => {
     const c = state.contracts.find((x) => x.id === id);
-    setState((st) => ({
-      ...st,
-      contracts: st.contracts.filter((x) => x.id !== id),
-      docs: st.docs.map((d) => (d.contractId === id ? { ...d, contractId: undefined } : d)),
-    }));
-    if (c) toast(`Договор № ${c.number} удалён, ссылки очищены`);
+    setState((st) => ({ ...st, contracts: st.contracts.map((x) => (x.id === id ? { ...x, status: s } : x)) }));
+    if (c) toast(`Договор № ${c.number}: «${CONTRACT_STATUS_META[s].label}»`);
+  };
+
+  const deleteContract = (id: string) => {
+    if (state.docs.some((d) => d.contractId === id)) {
+      toast("Нельзя удалить: к договору привязаны документы", "err");
+      return;
+    }
+    const c = state.contracts.find((x) => x.id === id);
+    setState((st) => ({ ...st, contracts: st.contracts.filter((x) => x.id !== id) }));
+    if (c) toast(`Договор № ${c.number} удалён`);
   };
 
   const addPayment = (p: Payment) => {
     setState((st) => {
       const doc = st.docs.find((d) => d.id === p.docId);
+      const docTotal = doc ? doc.items.reduce((s, it) => s + it.qty * it.price, 0) : Infinity;
       const alreadyPaid = st.payments.filter((x) => x.docId === p.docId).reduce((s, x) => s + x.amount, 0);
-      const willBePaid = doc ? alreadyPaid + p.amount >= Math.round(doc.items.reduce((s, it) => s + it.qty * it.price, 0)) : false;
+      const willBePaid = alreadyPaid + p.amount >= docTotal;
       return {
         ...st,
         payments: [...st.payments, p],
@@ -411,12 +400,12 @@ export default function App() {
           throw new Error("bad shape");
         }
         setState({
-          docs: parsed.docs,
+          docs: parsed.docs.filter((d) => d && (d.type === "invoice" || d.type === "act")),
           parties: parsed.parties,
           contracts: Array.isArray(parsed.contracts) ? parsed.contracts : [],
           payments: Array.isArray(parsed.payments) ? parsed.payments : [],
           letters: Array.isArray(parsed.letters) ? parsed.letters : [],
-          own: parsed.own,
+          own: { ...emptyState().own, ...parsed.own },
         });
         toast(`Импортировано: ${parsed.docs.length} документов, ${parsed.parties.length} контрагентов`);
       })
@@ -432,6 +421,7 @@ export default function App() {
   };
 
   const previewDoc = previewId ? state.docs.find((d) => d.id === previewId) ?? null : null;
+  const previewContract = contractId ? state.contracts.find((c) => c.id === contractId) ?? null : null;
   const title = TITLES[view];
 
   /* без сессии — только вход в систему */
@@ -501,11 +491,7 @@ export default function App() {
               <p className="truncate text-[12.5px] font-semibold text-white">{session.email}</p>
               <p className="mt-0.5 truncate font-mono text-[10px] text-white/40">{state.own.short}</p>
             </div>
-            <button
-              onClick={logout}
-              title="Выйти из системы"
-              className="shrink-0 cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger"
-            >
+            <button onClick={logout} className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger" title="Выйти">
               <IconExit size={14} />
             </button>
           </div>
@@ -532,18 +518,14 @@ export default function App() {
             <p className="font-display text-[13px] font-bold tracking-wide text-white">ИП Документы</p>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={logout} className="cursor-pointer border border-white/15 p-2 text-white/60" title="Выйти">
+              <IconExit size={14} />
+            </button>
             <button
               onClick={() => setEditing("new")}
               className="flex cursor-pointer items-center gap-1.5 bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
             >
               <IconPlus size={12} /> документ
-            </button>
-            <button
-              onClick={logout}
-              title="Выйти"
-              className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger"
-            >
-              <IconExit size={13} />
             </button>
           </div>
         </div>
@@ -591,10 +573,12 @@ export default function App() {
               <Documents
                 docs={state.docs}
                 parties={state.parties}
+                contracts={state.contracts.map((c) => ({ id: c.id, number: c.number }))}
                 onPreview={(id) => setPreviewId(id)}
                 onEdit={(d) => setEditing(d)}
                 onNew={() => setEditing("new")}
                 onStatus={setStatus}
+                onOpenContract={(id) => setContractId(id)}
               />
             )}
             {view === "contracts" && (
@@ -604,11 +588,10 @@ export default function App() {
                 docs={state.docs}
                 onUpsert={upsertContract}
                 onDelete={deleteContract}
+                onOpen={(id) => setContractId(id)}
               />
             )}
-            {view === "payments" && (
-              <Payments payments={state.payments} docs={state.docs} parties={state.parties} onAdd={addPayment} />
-            )}
+            {view === "payments" && <Payments payments={state.payments} docs={state.docs} parties={state.parties} onAdd={addPayment} />}
             {view === "letters" && <Letters letters={state.letters} parties={state.parties} onAdd={addLetter} />}
             {view === "parties" && (
               <Counterparties parties={state.parties} docs={state.docs} onUpsert={upsertParty} onDelete={deleteParty} />
@@ -655,11 +638,32 @@ export default function App() {
         />
       )}
 
+      {previewContract && (
+        <ContractDetail
+          contract={previewContract}
+          party={state.parties.find((p) => p.id === previewContract.counterpartyId)}
+          docs={state.docs.filter((d) => d.contractId === previewContract.id)}
+          payments={state.payments.filter((p) =>
+            state.docs.some((d) => d.id === p.docId && d.contractId === previewContract.id)
+          )}
+          own={state.own}
+          parties={state.parties}
+          parents={state.contracts.filter((c) => !c.parentId && c.id !== previewContract.id).map((c) => ({ id: c.id, number: c.number }))}
+          onClose={() => setContractId(null)}
+          onStatus={setContractStatus}
+          onUpdate={upsertContract}
+          onOpenDoc={(id) => {
+            setContractId(null);
+            setPreviewId(id);
+          }}
+        />
+      )}
+
       {editing !== null && (
         <DocumentForm
           initial={editing === "new" ? null : editing}
           parties={state.parties}
-          contracts={state.contracts}
+          contracts={state.contracts.map((c) => ({ id: c.id, number: c.number, subject: c.subject }))}
           fallbackNumber={nextNumber(state.docs)}
           onSave={saveDoc}
           onClose={() => setEditing(null)}

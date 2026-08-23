@@ -3,19 +3,19 @@ export type User = {
   email: string;
   name: string;
   passHash: string;
-  createdAt: string;
 };
 
 export type Session = { userId: string; email: string };
 export type AuthResult = { ok: true; user: User } | { ok: false; error: string };
 
-const USERS_KEY = "ip-dok-users";
-const SESSION_KEY = "ip-dok-session";
+const USERS_KEY = "ip-dok-v2:users";
+const SESSION_KEY = "ip-dok-v2:session";
 
 function readUsers(): User[] {
   try {
     const raw = localStorage.getItem(USERS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -23,24 +23,34 @@ function readUsers(): User[] {
 }
 
 function writeUsers(users: User[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  } catch {
+    /* приватный режим */
+  }
 }
 
-/* SHA-256, если доступен (https/localhost), иначе djb2-фолбэк */
-async function hash(text: string): Promise<string> {
+/* SHA-256, если доступен (https); иначе детерминированный фолбэк,
+   чтобы вход работал и на http-превью */
+async function hash(s: string): Promise<string> {
   try {
-    if (crypto?.subtle) {
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-      return Array.from(new Uint8Array(buf))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+    if (typeof crypto !== "undefined" && crypto.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+      return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
     }
   } catch {
-    /* небезопасный контекст — фолбэк */
+    /* fallthrough */
   }
-  let h = 5381;
-  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
-  return "djb2-" + (h >>> 0).toString(16);
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -56,7 +66,6 @@ export async function register(email: string, password: string, name?: string): 
     email: mail,
     name: name?.trim() || mail.split("@")[0],
     passHash: await hash(mail + "::" + password),
-    createdAt: new Date().toISOString().slice(0, 10),
   };
   writeUsers([...users, user]);
   saveSession({ userId: user.id, email: user.email });
@@ -73,6 +82,7 @@ export async function login(email: string, password: string): Promise<AuthResult
   return { ok: true, user };
 }
 
+/* демо-доступ: создаётся один раз, данные наполняются извне */
 export async function demoLogin(): Promise<AuthResult> {
   const users = readUsers();
   let user = users.find((u) => u.email === "demo@ip-dok.ru");
@@ -81,8 +91,7 @@ export async function demoLogin(): Promise<AuthResult> {
       id: "u-demo",
       email: "demo@ip-dok.ru",
       name: "Демо-доступ",
-      passHash: await hash("demo@ip-dok.ru::demo1234"),
-      createdAt: new Date().toISOString().slice(0, 10),
+      passHash: await hash("demo@ip-dok.ru::demo"),
     };
     writeUsers([...users, user]);
   }
@@ -90,33 +99,29 @@ export async function demoLogin(): Promise<AuthResult> {
   return { ok: true, user };
 }
 
-export function saveSession(s: Session) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-}
-
 export function loadSession(): Session | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    const s = JSON.parse(raw);
-    return s && typeof s.userId === "string" ? (s as Session) : null;
+    const s = JSON.parse(raw) as Session;
+    return s && s.userId ? s : null;
   } catch {
     return null;
   }
 }
 
+export function saveSession(s: Session) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  } catch {
+    /* приватный режим */
+  }
+}
+
 export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-export function getUser(id: string): User | undefined {
-  return readUsers().find((u) => u.id === id);
-}
-
-/* арифметическая капча, как в оригинале */
-export function makeCaptcha(): { a: number; b: number } {
-  return {
-    a: 10 + Math.floor(Math.random() * 40),
-    b: 10 + Math.floor(Math.random() * 40),
-  };
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* приватный режим */
+  }
 }

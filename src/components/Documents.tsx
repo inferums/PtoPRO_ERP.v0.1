@@ -15,17 +15,21 @@ import { IconArrow, IconPencil, IconPlus, IconSearch } from "./icons";
 export default function Documents({
   docs,
   parties,
+  contracts,
   onPreview,
   onEdit,
   onNew,
   onStatus,
+  onOpenContract,
 }: {
   docs: Doc[];
   parties: Party[];
+  contracts: { id: string; number: string }[];
   onPreview: (id: string) => void;
   onEdit: (doc: Doc) => void;
   onNew: () => void;
   onStatus: (id: string, s: DocStatus) => void;
+  onOpenContract: (id: string) => void;
 }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<DocStatus | "all">("all");
@@ -45,14 +49,12 @@ export default function Documents({
           d.items.some((it) => it.name.toLowerCase().includes(query))
         );
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [docs, parties, q, filter]);
 
   const counts = STATUS_ORDER.map((s) => ({ s, n: docs.filter((d) => d.status === s).length }));
 
   return (
     <div className="fade-up">
-      {/* фильтры */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -87,9 +89,8 @@ export default function Documents({
         </div>
       </div>
 
-      {/* таблица */}
       <div className="mt-4 overflow-x-auto border border-line bg-surface">
-        <table className="w-full min-w-[720px] border-collapse text-left">
+        <table className="w-full min-w-[760px] border-collapse text-left">
           <thead>
             <tr className="border-b border-line bg-soft">
               {["№ и дата", "Тип", "Контрагент", "Сумма", "Статус", ""].map((h, i) => (
@@ -102,6 +103,7 @@ export default function Documents({
           <tbody className="divide-y divide-line">
             {filtered.map((d, i) => {
               const meta = STATUS_META[d.status];
+              const contract = d.contractId ? contracts.find((c) => c.id === d.contractId) : undefined;
               return (
                 <tr
                   key={d.id}
@@ -109,11 +111,26 @@ export default function Documents({
                   className="fade-up group cursor-pointer transition-colors hover:bg-soft"
                   style={{ animationDelay: `${Math.min(i * 35, 320)}ms` }}
                 >
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 align-top">
                     <span className="font-mono text-[13px] font-semibold text-ink">№ {d.number}</span>
                     <span className="mt-0.5 block font-mono text-[10.5px] text-dim">{fmtDate(d.date)}</span>
+                    {contract && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenContract(contract.id);
+                        }}
+                        className="mt-1.5 inline-flex cursor-pointer items-center gap-1 border border-brand/40 bg-brand/5 px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.06em] text-brand transition-colors hover:bg-brand hover:text-white"
+                        title={`Открыть договор № ${contract.number}`}
+                      >
+                        <svg width="9" height="9" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path d="M5 2.6h7.2l3.2 3.2v11.6H5z" />
+                        </svg>
+                        д-р № {contract.number}
+                      </button>
+                    )}
                   </td>
-                  <td className="px-4 py-3.5 text-[13px] text-mut">{TYPE_META[d.type].label}</td>
+                  <td className="px-4 py-3.5 text-[13px] text-mut">{TYPE_META[d.type]?.label ?? "—"}</td>
                   <td className="max-w-[240px] truncate px-4 py-3.5 text-[13.5px] font-medium text-ink">{partyName(d.counterpartyId)}</td>
                   <td className="px-4 py-3.5 text-right font-mono text-[13px] font-semibold text-ink">{fmtMoney(calc(d).total)}</td>
                   <td className="px-4 py-3.5">
@@ -168,10 +185,7 @@ export default function Documents({
               >
                 сбросить
               </button>
-              <button
-                onClick={onNew}
-                className="flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-              >
+              <button onClick={onNew} className="flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2">
                 <IconPlus size={13} /> новый документ
               </button>
             </div>
@@ -179,9 +193,7 @@ export default function Documents({
         )}
       </div>
 
-      <p className="mt-3 font-mono text-[11px] text-dim">
-        показано {filtered.length} из {docs.length} · наведение на строку — быстрые действия
-      </p>
+      <p className="mt-3 font-mono text-[11px] text-dim">показано {filtered.length} из {docs.length} · наведение на строку — быстрые действия</p>
     </div>
   );
 }

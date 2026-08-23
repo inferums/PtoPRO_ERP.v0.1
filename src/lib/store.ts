@@ -37,27 +37,35 @@ export type Own = {
   email?: string;
   website?: string;
   bank: string;
-  bik: string;
   corrAccount?: string;
+  bik: string;
   account: string;
   director: string;
 };
 
-export type ContractStatus = "active" | "expired" | "terminated";
+export type ContractStatus = "active" | "completed" | "terminated";
+export type ContractKind = "income" | "expense";
 export type Contract = {
   id: string;
-  number: string;
-  date: string;
+  number: string; // «Д-002/2024»
   counterpartyId: string;
   subject: string;
-  amount: number;
-  validUntil?: string;
+  kind: ContractKind; // Доход / Расход
+  plannedIncome: number;
+  plannedExpense: number;
+  actualIncome: number;
+  actualExpense: number;
   status: ContractStatus;
+  startDate: string;
+  endDate: string;
+  parentId?: string; // субдоговор
 };
+
+export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;
 
 export type Payment = {
   id: string;
-  docId: string; // к какому счёту/акту
+  docId: string;
   date: string;
   amount: number;
   method: string;
@@ -83,11 +91,13 @@ export type State = {
   own: Own;
 };
 
-export const LS_KEY = "ip-dok-v1";
+const LS_PREFIX = "ip-dok-v2";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
-/* «N месяцев назад» → префикс «YYYY-MM», к которому добавляется день */
+const stateKey = (userId: string) => `${LS_PREFIX}:state:${userId}`;
+
+/* «N месяцев назад» → префикс «YYYY-MM» */
 const d = (monthsAgo: number) => {
   const t = new Date();
   t.setDate(1);
@@ -104,24 +114,24 @@ export const DEFAULT_OWN: Own = {
   email: "ivanov@ptopro.ru",
   website: "ptopro.space-z.ai",
   bank: "АО «АЛЬФА-БАНК» г. Москва",
-  bik: "044525593",
   corrAccount: "30101810200000000593",
+  bik: "044525593",
   account: "40802810500000012345",
   director: "Иванов И. И.",
 };
 
 export function seedState(): State {
   const parties: Party[] = [
-    { id: "p1", name: "ООО «ТехноСтрой»", inn: "7701234567", person: "Гаврилов П. С.", bank: "ПАО Сбербанк", bik: "044525225", account: "40702810400000012345" },
-    { id: "p2", name: "ООО «Вектор Плюс»", inn: "7719876543", person: "Ким Д. А.", bank: "АО «АЛЬФА-БАНК»", bik: "044525593", account: "40702810900000067890" },
-    { id: "p3", name: "ООО «СтройГарант»", inn: "5024567890", person: "Мельник О. В." },
+    { id: "p1", name: 'ООО "Альфа"', inn: "7701234567", person: "Гаврилов П. С.", bank: "ПАО Сбербанк", bik: "044525225", account: "40702810400000012345" },
+    { id: "p2", name: 'ООО "Бета"', inn: "7719876543", person: "Ким Д. А.", bank: "АО «АЛЬФА-БАНК»", bik: "044525593", account: "40702810900000067890" },
+    { id: "p3", name: 'ООО "Гамма"', inn: "5024567890", person: "Мельник О. В." },
     { id: "p4", name: "ИП Смирнова Анна Павловна", inn: "772201234567", person: "Смирнова А. П." },
   ];
 
   const contracts: Contract[] = [
-    { id: "c1", number: "12/25", date: d(2) + "-01", counterpartyId: "p2", subject: "Абонентское сопровождение ПТО", amount: 20000, validUntil: `${new Date().getFullYear()}-12-31`, status: "active" },
-    { id: "c2", number: "09/25", date: d(4) + "-10", counterpartyId: "p1", subject: "Разработка проектной документации", amount: 63000, status: "active" },
-    { id: "c3", number: "03/25", date: d(5) + "-15", counterpartyId: "p3", subject: "Тендерное сопровождение", amount: 35500, status: "expired" },
+    { id: "c1", number: "Д-001/2024", counterpartyId: "p1", subject: "Разработка информационной системы", kind: "income", plannedIncome: 500000, plannedExpense: 0, actualIncome: 100000, actualExpense: 0, status: "active", startDate: "2024-01-15", endDate: "2024-12-31" },
+    { id: "c2", number: "Д-002/2024", counterpartyId: "p2", subject: "Техническая поддержка", kind: "income", plannedIncome: 120000, plannedExpense: 0, actualIncome: 30000, actualExpense: 40000, status: "active", startDate: "2024-03-01", endDate: "2024-12-31" },
+    { id: "c3", number: "Д-003/2024", counterpartyId: "p3", subject: "Субподряд на дизайн", kind: "expense", plannedIncome: 0, plannedExpense: 80000, actualIncome: 0, actualExpense: 40000, status: "active", startDate: "2024-02-01", endDate: "2024-12-31", parentId: "c2" },
   ];
 
   const docs: Doc[] = [
@@ -160,50 +170,88 @@ export function seedState(): State {
     { id: "pay1", docId: "d5", date: d(1) + "-26", amount: 32000, method: "Банковский перевод" },
     { id: "pay2", docId: "d8", date: d(1) + "-08", amount: 6000, method: "Банковский перевод" },
     { id: "pay3", docId: "d9", date: d(3) + "-25", amount: 63000, method: "Банковский перевод", comment: "по договору 09/25" },
-    { id: "pay4", docId: "d10", date: d(4) + "-27", amount: 9000, method: "Банковский перевод" },
+    { id: "pay4", docId: "d10", date: d(4) + "-28", amount: 9000, method: "Банковский перевод" },
   ];
 
   const letters: Letter[] = [
-    { id: "l1", number: "исх-31", date: d(0) + "-12", counterpartyId: "p3", direction: "out", subject: "О сроках подачи тендерной заявки", body: "Направляем уточнённый график подготовки документации. Просим подтвердить участие до конца недели." },
-    { id: "l2", number: "вх-18", date: d(1) + "-02", counterpartyId: "p2", direction: "in", subject: "Запрос актов за отчётный период", body: "Просим предоставить акты выполненных работ по договору 12/25 за последний квартал." },
-    { id: "l3", number: "исх-27", date: d(2) + "-20", counterpartyId: "p1", direction: "out", subject: "Согласование раздела АР", body: "Направляем на согласование альбом архитектурных решений. Ждём замечаний в течение 5 рабочих дней." },
+    { id: "l1", number: "исх-31", date: d(0) + "-12", counterpartyId: "p3", direction: "out", subject: "О сроках подачи заявки", body: "Уважаемый Олег Владимирович!\n\nНаправляем уточнённый график подготовки тендерной документации. Просим подтвердить сроки согласования до конца недели." },
+    { id: "l2", number: "вх-18", date: d(0) + "-08", counterpartyId: "p2", direction: "in", subject: "Запрос актов за месяц", body: "Просим направить акты выполненных работ за текущий месяц для сверки." },
+    { id: "l3", number: "исх-29", date: d(1) + "-14", counterpartyId: "p1", direction: "out", subject: "Согласование исполнительной документации", body: "Направляем комплект исполнительной документации по объекту. Просим подписать и вернуть один экземпляр." },
   ];
 
-  return { docs, parties, contracts, payments, letters, own: DEFAULT_OWN };
+  return { docs, parties, contracts, payments, letters, own: { ...DEFAULT_OWN } };
 }
 
 export function emptyState(): State {
   return { docs: [], parties: [], contracts: [], payments: [], letters: [], own: { ...DEFAULT_OWN } };
 }
 
-const stateKey = (userId: string) => `${LS_KEY}:${userId}`;
-
-export function loadState(userId: string): State {
+export function hasState(userId: string): boolean {
   try {
-    const raw = localStorage.getItem(stateKey(userId));
-    if (raw) {
-      const parsed = JSON.parse(raw) as State;
-      if (parsed && Array.isArray(parsed.docs) && Array.isArray(parsed.parties) && parsed.own) {
-        return {
-          ...parsed,
-          contracts: Array.isArray(parsed.contracts) ? parsed.contracts : [],
-          payments: Array.isArray(parsed.payments) ? parsed.payments : [],
-          letters: Array.isArray(parsed.letters) ? parsed.letters : [],
-          own: { ...DEFAULT_OWN, ...parsed.own },
-        };
-      }
-    }
+    return localStorage.getItem(stateKey(userId)) !== null;
   } catch {
-    /* повреждённые данные — пересеваем */
+    return false;
   }
-  return emptyState();
 }
 
-export function saveState(userId: string, s: State) {
+export function loadState(userId: string): State {
+  const empty = emptyState();
   try {
-    localStorage.setItem(stateKey(userId), JSON.stringify(s));
+    const raw = localStorage.getItem(stateKey(userId));
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<State>;
+    const rawDocs = Array.isArray(parsed.docs) ? parsed.docs : [];
+    const contracts: Contract[] = Array.isArray(parsed.contracts) ? parsed.contracts.slice() : [];
+    const docs: Doc[] = [];
+
+    /* миграция: документы старого формата с type «contract» переезжают в реестр договоров,
+       неизвестные типы отбрасываются — приложение не упадёт на чужих данных */
+    rawDocs.forEach((d) => {
+      if (!d || typeof d !== "object") return;
+      const doc = d as Doc;
+      if ((doc.type as string) === "contract") {
+        const legacy = doc as unknown as { id: string; number: number; date: string; counterpartyId: string; items: LineItem[] };
+        if (!contracts.some((c) => c.id === legacy.id)) {
+          const sum = (legacy.items ?? []).reduce((s, it) => s + (it.qty * it.price || 0), 0);
+          contracts.push({
+            id: legacy.id,
+            number: "Д-" + String(legacy.number),
+            counterpartyId: legacy.counterpartyId,
+            subject: legacy.items?.[0]?.name ?? "Договор",
+            kind: "income",
+            plannedIncome: sum,
+            plannedExpense: 0,
+            actualIncome: 0,
+            actualExpense: 0,
+            status: "active",
+            startDate: legacy.date,
+            endDate: legacy.date,
+          });
+        }
+        return;
+      }
+      if (doc.type !== "invoice" && doc.type !== "act") return;
+      docs.push(doc);
+    });
+
+    return {
+      docs,
+      parties: Array.isArray(parsed.parties) ? parsed.parties : [],
+      contracts,
+      payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+      letters: Array.isArray(parsed.letters) ? parsed.letters : [],
+      own: { ...empty.own, ...(parsed.own ?? {}) },
+    };
   } catch {
-    /* приватный режим — работаем в памяти */
+    return empty;
+  }
+}
+
+export function saveState(state: State, userId: string) {
+  try {
+    localStorage.setItem(stateKey(userId), JSON.stringify(state));
+  } catch {
+    /* приватный режим — молча пропускаем */
   }
 }
 
@@ -214,14 +262,6 @@ export function calc(doc: Doc) {
   const vat = doc.vat ? Math.round((subtotal * 20) / 120) : 0;
   return { subtotal, vat, total: subtotal };
 }
-
-/* Оплачено по документу */
-export const paidOf = (docId: string, payments: Payment[]) =>
-  payments.filter((p) => p.docId === docId).reduce((s, p) => s + p.amount, 0);
-
-/* «ИП» без двойного префикса (Этап 4, Ошибка 2) */
-export const displayName = (name: string) =>
-  name.trim().startsWith("ИП") ? name.trim() : `ИП ${name.trim()}`;
 
 export const fmtMoney = (n: number) =>
   new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + " ₽";
@@ -250,6 +290,10 @@ export function plural(n: number, f: [string, string, string]): string {
   return f[2];
 }
 
+/* «ИП Иванов» — без двойного префикса */
+export const displayName = (name: string) =>
+  name.trim().toLowerCase().startsWith("ип ") || name.trim().toLowerCase() === "ип" ? name.trim() : `ИП ${name.trim()}`;
+
 /* ---------- сумма прописью ---------- */
 
 const U_M = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
@@ -265,12 +309,10 @@ function tri(n: number, fem: boolean): string {
   if (h) parts.push(HUND[h]);
   if (rest >= 10 && rest < 20) parts.push(TEENS[rest - 10]);
   else {
-    if (rest >= 20 || rest < 10) {
-      const t = Math.floor(rest / 10);
-      const u = rest % 10;
-      if (t) parts.push(TENS[t]);
-      if (u) parts.push(fem ? U_F[u] : U_M[u]);
-    }
+    const t = Math.floor(rest / 10);
+    const u = rest % 10;
+    if (t) parts.push(TENS[t]);
+    if (u) parts.push(fem ? U_F[u] : U_M[u]);
   }
   return parts.join(" ");
 }
@@ -310,9 +352,16 @@ export const STATUS_META: Record<
 export const STATUS_ORDER: DocStatus[] = ["draft", "sent", "signed", "paid"];
 
 export const CONTRACT_STATUS_META: Record<ContractStatus, { label: string; chip: string; dot: string }> = {
-  active: { label: "Действует", chip: "bg-[#e1f3e9] text-[#1f7a4d] border-[#bcdcc9]", dot: "#2e9e6b" },
-  expired: { label: "Истёк", chip: "bg-[#eef1f7] text-[#5c6c84] border-[#d8e0eb]", dot: "#93a2b7" },
-  terminated: { label: "Расторгнут", chip: "bg-[#fbe7e5] text-[#b03a30] border-[#f2c7c3]", dot: "#e05555" },
+  active: { label: "Действующий", chip: "bg-[#E3F2FD] text-[#1565C0] border-transparent", dot: "#1565C0" },
+  completed: { label: "Завершён", chip: "bg-[#E8F5E9] text-[#2E7D32] border-transparent", dot: "#2E7D32" },
+  terminated: { label: "Расторгнут", chip: "bg-[#FFEBEE] text-[#C62828] border-transparent", dot: "#C62828" },
 };
+
+export const CONTRACT_KIND_META: Record<ContractKind, { label: string; chip: string }> = {
+  income: { label: "Доход", chip: "bg-[#E8F5E9] text-[#2E7D32] border-transparent" },
+  expense: { label: "Расход", chip: "bg-[#FFEBEE] text-[#C62828] border-transparent" },
+};
+
+export const CONTRACT_STATUS_ORDER: ContractStatus[] = ["active", "completed", "terminated"];
 
 export const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];

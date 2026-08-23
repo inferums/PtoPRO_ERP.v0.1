@@ -1,20 +1,5 @@
-# зависимости — ставятся командой npm install
-node_modules
-
-# результат сборки — Cloudflare Pages соберёт сам
-dist
-
-# локальные файлы среды
-.env
-.env.*
-*.local
-
-# служебное
-.DS_Store
-*.log
-.vscode
-.idea
 node_modules/
 .next/
 dist/
 build/
+*.log

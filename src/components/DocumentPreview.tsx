@@ -8,8 +8,10 @@ import {
   STATUS_META,
   TYPE_META,
   type Doc,
+  type DocStatus,
   type Own,
   type Party,
+  type Payment,
 } from "../lib/store";
 import { IconArrow, IconClose, IconCoin, IconDownload, IconPencil, IconPrint } from "./icons";
 
@@ -42,9 +44,9 @@ export default function DocumentPreview({
   party: Party | undefined;
   own: Own;
   contract: { number: string; subject: string } | undefined;
-  payments: { id: string; date: string; amount: number; method: string }[];
+  payments: Payment[];
   onClose: () => void;
-  onStatus: (id: string, s: NonNullable<(typeof STATUS_META)[keyof typeof STATUS_META]["next"]>) => void;
+  onStatus: (id: string, s: DocStatus) => void;
   onEdit: (doc: Doc) => void;
   onAddPayment: (amount: number) => void;
 }) {
@@ -52,7 +54,6 @@ export default function DocumentPreview({
   const { subtotal, vat, total } = calc(doc);
   const paid = payments.reduce((s, p) => s + p.amount, 0);
   const rest = Math.max(total - paid, 0);
-  const pct = total > 0 ? Math.min(Math.round((paid / total) * 100), 100) : 0;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -60,7 +61,7 @@ export default function DocumentPreview({
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  /* библиотека docx подгружается только по нажатию — не тянет основной бандл */
+  /* библиотека docx подгружается только по нажатию */
   const downloadWord = async () => {
     const { downloadDocx } = await import("../lib/docx");
     await downloadDocx(doc, party, own);
@@ -68,15 +69,12 @@ export default function DocumentPreview({
 
   return (
     <div className="overlay-in fixed inset-0 z-50 overflow-y-auto bg-navy/70">
-      {/* панель действий */}
       <div className="sticky top-0 z-20 border-b border-white/10 bg-navy px-4 py-3">
         <div className="mx-auto flex max-w-[900px] flex-wrap items-center gap-2">
           <button onClick={onClose} className="flex cursor-pointer items-center gap-2 border border-white/20 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-white/80 transition-colors hover:border-white/50 hover:text-white">
             <IconArrow size={13} className="rotate-180" /> к списку
           </button>
-          <span className={`ml-1 hidden border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] sm:inline-block ${meta.chip}`}>
-            {meta.label}
-          </span>
+          <span className={`ml-1 hidden border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] sm:inline-block ${meta.chip}`}>{meta.label}</span>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {meta.next && (
               <button
@@ -92,7 +90,7 @@ export default function DocumentPreview({
             <button onClick={() => window.print()} className="flex cursor-pointer items-center gap-2 border border-white/20 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-white/80 transition-colors hover:border-white/50 hover:text-white">
               <IconPrint size={13} /> печать
             </button>
-            <button onClick={() => void downloadWord()} className="flex cursor-pointer items-center gap-2 border border-amber/50 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-amber transition-colors hover:border-amber hover:bg-amber/10">
+            <button onClick={downloadWord} className="flex cursor-pointer items-center gap-2 border border-white/20 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-white/80 transition-colors hover:border-white/50 hover:text-white">
               <IconDownload size={13} /> word
             </button>
             <button onClick={onClose} className="cursor-pointer border border-white/20 p-2 text-white/70 transition-colors hover:border-danger hover:text-danger" title="Закрыть">
@@ -102,7 +100,6 @@ export default function DocumentPreview({
         </div>
       </div>
 
-      {/* лист А4 */}
       <div className="px-4 py-8">
         <div id="print-sheet" className="relative mx-auto w-[840px] max-w-full bg-white px-12 py-11 text-ink shadow-[0_50px_110px_-30px_rgba(0,0,0,0.6)]">
           {doc.status === "paid" && <Stamp date={doc.date} short={own.short} />}
@@ -111,7 +108,7 @@ export default function DocumentPreview({
           <div className="grid grid-cols-[1.25fr_1fr] border border-ink/80 text-[12px] leading-relaxed">
             <div className="border-r border-ink/80 p-3">
               <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Поставщик</span>
-              <p className="mt-1 font-semibold">{own.name}</p>
+              <p className="mt-1 font-semibold">{displayName(own.name)}</p>
               <p className="mt-0.5">ИНН {own.inn ?? "—"}</p>
               {own.address && <p>{own.address}</p>}
             </div>
@@ -129,7 +126,7 @@ export default function DocumentPreview({
                   )}
                 </div>
                 <div className="p-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Р/счёт</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-dim">Счёт</span>
                   <p className="mt-0.5 font-mono">{own.account}</p>
                 </div>
               </div>
@@ -137,14 +134,9 @@ export default function DocumentPreview({
           </div>
 
           <h2 className="mt-9 font-display text-[24px] font-extrabold tracking-[0.04em]">
-            {TYPE_META[doc.type].title} № {doc.number}
+            {TYPE_META[doc.type]?.title ?? "ДОКУМЕНТ"} № {doc.number}
           </h2>
           <p className="mt-1 text-[13.5px] text-mut">от {fmtDate(doc.date)}</p>
-          {contract && (
-            <p className="mt-2 text-[12.5px] text-mut">
-              Основание: <span className="font-semibold text-ink">договор № {contract.number}</span> — {contract.subject}
-            </p>
-          )}
 
           <div className="mt-7 text-[13px] leading-relaxed">
             <p>
@@ -152,9 +144,13 @@ export default function DocumentPreview({
               {party?.inn ? `, ИНН ${party.inn}` : ""}
             </p>
             {party?.person && <p className="text-mut">Контактное лицо: {party.person}</p>}
+            {contract && (
+              <p className="mt-1.5 border-l-2 border-brand bg-brand/5 py-1 pl-3 text-[12.5px]">
+                <span className="font-semibold">Основание:</span> договор № {contract.number} — {contract.subject}
+              </p>
+            )}
           </div>
 
-          {/* позиции */}
           <table className="mt-8 w-full border-collapse text-[12.5px]">
             <thead>
               <tr className="bg-soft">
@@ -179,7 +175,6 @@ export default function DocumentPreview({
             </tbody>
           </table>
 
-          {/* итоги */}
           <div className="ml-auto mt-5 w-72 text-[13px]">
             <p className="flex justify-between py-1"><span className="text-mut">Итого:</span><span className="font-mono font-semibold">{fmtMoney(subtotal)}</span></p>
             <p className="flex justify-between py-1">
@@ -194,8 +189,42 @@ export default function DocumentPreview({
           <p className="mt-6 text-[12.5px] italic text-mut">{amountInWords(total)}</p>
           {doc.note && <p className="mt-4 text-[12.5px]"><span className="font-semibold">Примечание:</span> {doc.note}</p>}
 
-          {/* подписи */}
-          <div className="mt-16 grid grid-cols-2 gap-10 text-[13px]">
+          {/* оплаты */}
+          <div className="mt-8 border border-line bg-soft/60">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+              <p className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-mut">
+                <IconCoin size={14} className="text-paid" /> оплаты · {payments.length}
+              </p>
+              <p className="font-mono text-[12px]">
+                <span className="text-paid">{fmtMoney(paid)}</span>
+                <span className="text-dim"> из {fmtMoney(total)}</span>
+                {rest > 0 && <span className="ml-2 text-wait">остаток {fmtMoney(rest)}</span>}
+              </p>
+            </div>
+            {payments.length > 0 && (
+              <div className="divide-y divide-line">
+                {payments.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[12.5px]">
+                    <span className="font-mono text-dim">{fmtDate(p.date)}</span>
+                    <span className="flex-1 truncate text-mut">{p.method}{p.comment ? ` · ${p.comment}` : ""}</span>
+                    <span className="font-mono font-semibold text-paid">{fmtMoney(p.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {rest > 0 && doc.status !== "draft" && (
+              <div className="border-t border-line px-4 py-3">
+                <button
+                  onClick={() => onAddPayment(rest)}
+                  className="cursor-pointer bg-paid px-4 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#268257]"
+                >
+                  записать оплату · {fmtMoney(rest)}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-10 grid grid-cols-2 gap-10 text-[13px]">
             <p>
               Руководитель
               <span className="mx-3 inline-block w-36 border-b border-dotted border-ink align-baseline" />
@@ -209,53 +238,11 @@ export default function DocumentPreview({
 
           {/* колонтитул: адрес · телефон · email · сайт */}
           <div className="mt-12 border-t-2 border-ink pt-3.5">
-            <p className="text-center font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink">
-              {displayName(own.short)}
-            </p>
+            <p className="text-center font-display text-[12px] font-bold tracking-[0.08em] text-ink">{own.short}</p>
             <p className="mt-1 text-center text-[11px] leading-relaxed text-mut">
               {[own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  ") || "реквизиты не заполнены"}
             </p>
           </div>
-          <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.14em] text-dim">
-            сформировано в системе «ИП Документооборот» · статус: {meta.label.toLowerCase()}
-          </p>
-        </div>
-
-        {/* рабочая панель оплат (не печатается) */}
-        <div className="mx-auto mt-6 w-[840px] max-w-full border border-white/15 bg-navy/60 p-5 backdrop-blur-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/50">Оплаты по документу</p>
-              <p className="mt-1.5 font-display text-[15px] font-bold text-white">
-                {fmtMoney(paid)} <span className="text-white/40">из</span> {fmtMoney(total)}
-              </p>
-            </div>
-            {rest > 0 ? (
-              <button
-                onClick={() => onAddPayment(rest)}
-                className="flex cursor-pointer items-center gap-2 bg-paid px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:brightness-110"
-              >
-                <IconCoin size={14} /> внести {fmtMoney(rest)}
-              </button>
-            ) : (
-              <span className="border border-paid/50 bg-paid/15 px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-paid">
-                оплачен полностью
-              </span>
-            )}
-          </div>
-          <div className="mt-3.5 h-1.5 w-full overflow-hidden bg-white/10">
-            <div className="h-full bg-paid transition-all duration-700" style={{ width: `${pct}%` }} />
-          </div>
-          {payments.length > 0 && (
-            <div className="mt-3.5 space-y-1.5">
-              {payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between font-mono text-[11.5px] text-white/70">
-                  <span>{fmtDate(p.date)} · {p.method}</span>
-                  <span className="font-semibold text-paid">+{fmtMoney(p.amount)}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

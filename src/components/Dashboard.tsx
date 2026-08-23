@@ -32,29 +32,15 @@ function useCountUp(target: number) {
   return v;
 }
 
-function StatTile({
-  label,
-  value,
-  sub,
-  dark,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  dark?: boolean;
-}) {
+function StatTile({ label, value, sub, dark }: { label: string; value: string; sub: string; dark?: boolean }) {
   return (
     <div
       className={`group border p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.35)] ${
         dark ? "border-navy bg-navy text-white" : "border-line bg-surface"
       }`}
     >
-      <p className={`font-mono text-[10.5px] uppercase tracking-[0.16em] ${dark ? "text-white/55" : "text-dim"}`}>
-        {label}
-      </p>
-      <p className={`mt-3 font-display text-[24px] font-extrabold leading-none tracking-tight ${dark ? "text-white" : "text-ink"}`}>
-        {value}
-      </p>
+      <p className={`font-mono text-[10.5px] uppercase tracking-[0.16em] ${dark ? "text-white/55" : "text-dim"}`}>{label}</p>
+      <p className={`mt-3 font-display text-[24px] font-extrabold leading-none tracking-tight ${dark ? "text-white" : "text-ink"}`}>{value}</p>
       <p className={`mt-2.5 text-[12px] ${dark ? "text-[#8cc3f2]" : "text-mut"}`}>{sub}</p>
     </div>
   );
@@ -97,27 +83,19 @@ export default function Dashboard({
   });
   const max = Math.max(...months.map((m) => m.sum), 1);
 
-  const recent = [...docs]
-    .sort((a, b) => b.date.localeCompare(a.date) || b.number - a.number)
-    .slice(0, 5);
+  const recent = [...docs].sort((a, b) => b.date.localeCompare(a.date) || b.number - a.number).slice(0, 5);
   const partyName = (id: string) => parties.find((p) => p.id === id)?.name ?? "—";
 
   return (
     <div className="fade-up">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          dark
-          label="Выставлено в этом месяце"
-          value={fmtMoney(Math.round(vBilled))}
-          sub={`${docs.filter((x) => x.date.startsWith(curPrefix)).length} документ(ов) за ${months[5].label}`}
-        />
+        <StatTile dark label="Выставлено в этом месяце" value={fmtMoney(Math.round(vBilled))} sub={`${docs.filter((x) => x.date.startsWith(curPrefix)).length} документ(ов) за ${months[5].label}`} />
         <StatTile label="Оплачено всего" value={fmtMoney(Math.round(vPaid))} sub="за всё время" />
         <StatTile label="Ожидают оплаты" value={fmtMoney(Math.round(vAwait))} sub="отправленные и подписанные" />
         <StatTile label="Черновики" value={String(drafts)} sub="ждут отправки" />
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-        {/* выручка по месяцам */}
         <div className="border border-line bg-surface p-6">
           <div className="flex items-baseline justify-between gap-4">
             <h3 className="font-display text-[15px] font-bold text-ink">Выручка по месяцам</h3>
@@ -130,9 +108,7 @@ export default function Dashboard({
                   {fmtMoneyShort(m.sum)}
                 </span>
                 <div
-                  className={`grow-y w-full max-w-[54px] transition-colors duration-300 ${
-                    m.current ? "bg-brand group-hover:bg-brand2" : "bg-navy/15 group-hover:bg-navy/30"
-                  }`}
+                  className={`grow-y w-full max-w-[54px] transition-colors duration-300 ${m.current ? "bg-brand group-hover:bg-brand2" : "bg-navy/15 group-hover:bg-navy/30"}`}
                   style={{ height: `${Math.max((m.sum / max) * 100, m.sum ? 4 : 1.5)}%`, animationDelay: `${i * 70}ms` }}
                 />
                 <span className={`font-mono text-[10.5px] uppercase ${m.current ? "font-semibold text-brand" : "text-dim"}`}>{m.label}</span>
@@ -141,14 +117,10 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* последние документы */}
         <div className="flex flex-col border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line px-5 py-4">
             <h3 className="font-display text-[15px] font-bold text-ink">Последние документы</h3>
-            <button
-              onClick={onGoDocs}
-              className="group flex cursor-pointer items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-brand transition-colors hover:text-brand2"
-            >
+            <button onClick={onGoDocs} className="group flex cursor-pointer items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-brand transition-colors hover:text-brand2">
               все <IconArrow size={13} className="transition-transform duration-300 group-hover:translate-x-0.5" />
             </button>
           </div>
@@ -156,10 +128,7 @@ export default function Dashboard({
             {recent.length === 0 && (
               <div className="p-8 text-center">
                 <p className="text-[13.5px] text-mut">Документов пока нет</p>
-                <button
-                  onClick={onNew}
-                  className="mt-4 inline-flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-                >
+                <button onClick={onNew} className="mt-4 inline-flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2">
                   <IconPlus size={13} /> создать первый
                 </button>
               </div>
@@ -171,20 +140,16 @@ export default function Dashboard({
                 className="fade-up flex w-full cursor-pointer items-center gap-3.5 px-5 py-3.5 text-left transition-colors hover:bg-soft"
                 style={{ animationDelay: `${i * 50}ms` }}
               >
-                <span className="grid h-9 w-11 shrink-0 place-items-center border border-line bg-soft font-mono text-[11.5px] font-semibold text-mut">
-                  №{d.number}
-                </span>
+                <span className="grid h-9 w-11 shrink-0 place-items-center border border-line bg-soft font-mono text-[11.5px] font-semibold text-mut">№{d.number}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-semibold text-ink">
-                    {TYPE_META[d.type].label} · {partyName(d.counterpartyId)}
+                    {TYPE_META[d.type]?.label ?? "Документ"} · {partyName(d.counterpartyId)}
                   </span>
                   <span className="mt-0.5 block font-mono text-[10.5px] text-dim">{fmtDate(d.date)}</span>
                 </span>
                 <span className="text-right">
                   <span className="block font-mono text-[13px] font-semibold text-ink">{fmtMoney(calc(d).total)}</span>
-                  <span
-                    className={`mt-1 inline-block border px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.08em] ${STATUS_META[d.status].chip}`}
-                  >
+                  <span className={`mt-1 inline-block border px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.08em] ${STATUS_META[d.status].chip}`}>
                     {STATUS_META[d.status].label}
                   </span>
                 </span>
