@@ -35,7 +35,6 @@ import Counterparties from "./components/Counterparties";
 import {
   Logo,
   IconGrid,
-  IconDoc,
   IconContract,
   IconCoin,
   IconLetter,
@@ -51,7 +50,6 @@ type Toast = { id: number; text: string; tone: "ok" | "err" };
 
 const NAV: { id: View; label: string; icon: (p: { size?: number }) => ReactNode }[] = [
   { id: "dashboard", label: "Обзор", icon: (p) => <IconGrid {...p} /> },
-  { id: "docs", label: "Документы", icon: (p) => <IconDoc {...p} /> },
   { id: "contracts", label: "Договоры", icon: (p) => <IconContract {...p} /> },
   { id: "payments", label: "Оплаты", icon: (p) => <IconCoin {...p} /> },
   { id: "letters", label: "Письма", icon: (p) => <IconLetter {...p} /> },
@@ -560,13 +558,38 @@ export default function App() {
           </div>
 
           <div className="px-4 py-6 md:px-8 md:py-7">
+            {previewContract ? (
+              <ContractDetail
+                contract={previewContract}
+                party={state.parties.find((p) => p.id === previewContract.counterpartyId)}
+                docs={state.docs.filter((d) => d.contractId === previewContract.id)}
+                payments={state.payments.filter((p) =>
+                  state.docs.some((d) => d.id === p.docId && d.contractId === previewContract.id)
+                )}
+                letters={state.letters.filter((l) => l.counterpartyId === previewContract.counterpartyId)}
+                contracts={state.contracts}
+                parties={state.parties}
+                own={state.own}
+                onBack={() => setContractId(null)}
+                onOpenContract={(id) => setContractId(id)}
+                onStatus={setContractStatus}
+                onUpdate={upsertContract}
+                onDelete={(id) => {
+                  deleteContract(id);
+                  setContractId(null);
+                }}
+                onOpenDoc={(id) => setPreviewId(id)}
+                onAddPayment={addPayment}
+              />
+            ) : (
+              <>
             {view === "dashboard" && (
               <Dashboard
                 docs={state.docs}
                 parties={state.parties}
                 onOpen={(id) => setPreviewId(id)}
                 onNew={() => setEditing("new")}
-                onGoDocs={() => setView("docs")}
+                onGoDocs={() => setView("contracts")}
               />
             )}
             {view === "docs" && (
@@ -611,6 +634,8 @@ export default function App() {
                 onImport={importBackup}
               />
             )}
+              </>
+            )}
           </div>
         </div>
       </main>
@@ -635,27 +660,6 @@ export default function App() {
           onAddPayment={(amount) =>
             addPayment({ id: uid(), docId: previewDoc.id, date: todayISO(), amount, method: "Банковский перевод" })
           }
-        />
-      )}
-
-      {previewContract && (
-        <ContractDetail
-          contract={previewContract}
-          party={state.parties.find((p) => p.id === previewContract.counterpartyId)}
-          docs={state.docs.filter((d) => d.contractId === previewContract.id)}
-          payments={state.payments.filter((p) =>
-            state.docs.some((d) => d.id === p.docId && d.contractId === previewContract.id)
-          )}
-          own={state.own}
-          parties={state.parties}
-          parents={state.contracts.filter((c) => !c.parentId && c.id !== previewContract.id).map((c) => ({ id: c.id, number: c.number }))}
-          onClose={() => setContractId(null)}
-          onStatus={setContractStatus}
-          onUpdate={upsertContract}
-          onOpenDoc={(id) => {
-            setContractId(null);
-            setPreviewId(id);
-          }}
         />
       )}
 
