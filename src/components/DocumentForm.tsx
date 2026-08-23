@@ -18,6 +18,7 @@ export default function DocumentForm({
   parties,
   contracts,
   fallbackNumber,
+  forcedType,
   onSave,
   onClose,
 }: {
@@ -25,10 +26,11 @@ export default function DocumentForm({
   parties: Party[];
   contracts: { id: string; number: string; subject: string }[];
   fallbackNumber: number;
+  forcedType?: DocType;
   onSave: (doc: Doc) => void;
   onClose: () => void;
 }) {
-  const [type, setType] = useState<DocType>(initial?.type ?? "invoice");
+  const [type, setType] = useState<DocType>(initial?.type ?? forcedType ?? "invoice");
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [counterpartyId, setCounterpartyId] = useState(initial?.counterpartyId ?? parties[0]?.id ?? "");
   const [contractId, setContractId] = useState(initial?.contractId ?? "");
@@ -94,23 +96,32 @@ export default function DocumentForm({
         </div>
 
         <div className="grid gap-5 px-6 py-6 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <span className={lbl}>Тип документа</span>
-            <div className="grid grid-cols-2 gap-1 border border-line bg-soft p-1">
-              {(Object.keys(TYPE_META) as DocType[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setType(t)}
-                  className={`cursor-pointer px-3 py-2 font-mono text-[11.5px] uppercase tracking-[0.08em] transition-all ${
-                    type === t ? "bg-white font-semibold text-brand shadow-sm" : "text-mut hover:text-ink"
-                  }`}
-                >
-                  {TYPE_META[t].label}
-                </button>
-              ))}
+          {forcedType ? (
+            <div>
+              <span className={lbl}>Тип документа</span>
+              <p className="flex h-[42px] items-center border border-line bg-soft px-3 font-mono text-[11.5px] uppercase tracking-[0.08em] text-brand">
+                {TYPE_META[forcedType].label}
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="sm:col-span-2">
+              <span className={lbl}>Тип документа</span>
+              <div className="grid grid-cols-2 gap-1 border border-line bg-soft p-1">
+                {(Object.keys(TYPE_META) as DocType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    className={`cursor-pointer px-3 py-2 font-mono text-[11.5px] uppercase tracking-[0.08em] transition-all ${
+                      type === t ? "bg-white font-semibold text-brand shadow-sm" : "text-mut hover:text-ink"
+                    }`}
+                  >
+                    {TYPE_META[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className={lbl}>Дата</label>

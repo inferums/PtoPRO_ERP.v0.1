@@ -8,6 +8,7 @@ import {
   TYPE_META,
   type Doc,
   type DocStatus,
+  type DocType,
   type Party,
 } from "../lib/store";
 import { IconArrow, IconPencil, IconPlus, IconSearch } from "./icons";
@@ -16,6 +17,7 @@ export default function Documents({
   docs,
   parties,
   contracts,
+  typeFilter,
   onPreview,
   onEdit,
   onNew,
@@ -25,6 +27,7 @@ export default function Documents({
   docs: Doc[];
   parties: Party[];
   contracts: { id: string; number: string }[];
+  typeFilter?: DocType;
   onPreview: (id: string) => void;
   onEdit: (doc: Doc) => void;
   onNew: () => void;
@@ -34,11 +37,16 @@ export default function Documents({
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<DocStatus | "all">("all");
 
+  const base = useMemo(
+    () => (typeFilter ? docs.filter((d) => d.type === typeFilter) : docs),
+    [docs, typeFilter]
+  );
+
   const partyName = (id: string) => parties.find((p) => p.id === id)?.name ?? "—";
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return [...docs]
+    return [...base]
       .sort((a, b) => b.date.localeCompare(a.date) || b.number - a.number)
       .filter((d) => (filter === "all" ? true : d.status === filter))
       .filter((d) => {
@@ -49,9 +57,9 @@ export default function Documents({
           d.items.some((it) => it.name.toLowerCase().includes(query))
         );
       });
-  }, [docs, parties, q, filter]);
+  }, [base, parties, q, filter]);
 
-  const counts = STATUS_ORDER.map((s) => ({ s, n: docs.filter((d) => d.status === s).length }));
+  const counts = STATUS_ORDER.map((s) => ({ s, n: base.filter((d) => d.status === s).length }));
 
   return (
     <div className="fade-up">
@@ -93,8 +101,8 @@ export default function Documents({
         <table className="w-full min-w-[760px] border-collapse text-left">
           <thead>
             <tr className="border-b border-line bg-soft">
-              {["№ и дата", "Тип", "Контрагент", "Сумма", "Статус", ""].map((h, i) => (
-                <th key={i} className={`px-4 py-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-dim ${i === 3 ? "text-right" : ""}`}>
+              {(typeFilter ? ["№ и дата", "Контрагент", "Сумма", "Статус", ""] : ["№ и дата", "Тип", "Контрагент", "Сумма", "Статус", ""]).map((h, i, arr) => (
+                <th key={i} className={`px-4 py-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-dim ${h === "Сумма" ? "text-right" : ""} ${i === arr.length - 1 ? "w-28" : ""}`}>
                   {h}
                 </th>
               ))}
@@ -130,7 +138,7 @@ export default function Documents({
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-[13px] text-mut">{TYPE_META[d.type]?.label ?? "—"}</td>
+                  {!typeFilter && <td className="px-4 py-3.5 text-[13px] text-mut">{TYPE_META[d.type]?.label ?? "—"}</td>}
                   <td className="max-w-[240px] truncate px-4 py-3.5 text-[13.5px] font-medium text-ink">{partyName(d.counterpartyId)}</td>
                   <td className="px-4 py-3.5 text-right font-mono text-[13px] font-semibold text-ink">{fmtMoney(calc(d).total)}</td>
                   <td className="px-4 py-3.5">
@@ -193,7 +201,7 @@ export default function Documents({
         )}
       </div>
 
-      <p className="mt-3 font-mono text-[11px] text-dim">показано {filtered.length} из {docs.length} · наведение на строку — быстрые действия</p>
+      <p className="mt-3 font-mono text-[11px] text-dim">показано {filtered.length} из {base.length} · наведение на строку — быстрые действия</p>
     </div>
   );
 }

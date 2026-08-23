@@ -1,6 +1,6 @@
 {
-  "name": "ИП Документооборот",
-  "short_name": "ИП Документы",
+  "name": "PtoPRO-ERP",
+  "short_name": "PtoPRO",
   "description": "Система управления документами для ИП",
   "start_url": "/",
   "scope": "/",
