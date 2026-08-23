@@ -59,6 +59,7 @@ export type Contract = {
   startDate: string;
   endDate: string;
   parentId?: string; // субдоговор
+  description?: string;
 };
 
 export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;
@@ -130,7 +131,7 @@ export function seedState(): State {
 
   const contracts: Contract[] = [
     { id: "c1", number: "Д-001/2024", counterpartyId: "p1", subject: "Разработка информационной системы", kind: "income", plannedIncome: 500000, plannedExpense: 0, actualIncome: 100000, actualExpense: 0, status: "active", startDate: "2024-01-15", endDate: "2024-12-31" },
-    { id: "c2", number: "Д-002/2024", counterpartyId: "p2", subject: "Техническая поддержка", kind: "income", plannedIncome: 120000, plannedExpense: 0, actualIncome: 30000, actualExpense: 40000, status: "active", startDate: "2024-03-01", endDate: "2024-12-31" },
+    { id: "c2", number: "Д-002/2024", counterpartyId: "p2", subject: "Техническая поддержка", kind: "income", plannedIncome: 120000, plannedExpense: 0, actualIncome: 30000, actualExpense: 40000, status: "active", startDate: "2024-03-01", endDate: "2024-12-31", description: 'Техподдержка ООО "Бета"' },
     { id: "c3", number: "Д-003/2024", counterpartyId: "p3", subject: "Субподряд на дизайн", kind: "expense", plannedIncome: 0, plannedExpense: 80000, actualIncome: 0, actualExpense: 40000, status: "active", startDate: "2024-02-01", endDate: "2024-12-31", parentId: "c2" },
   ];
 
