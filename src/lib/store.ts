@@ -43,17 +43,25 @@ export type Own = {
   director: string;
 };
 
-export type ContractStatus = "active" | "expired" | "terminated";
+export type ContractStatus = "active" | "completed" | "terminated";
+export type ContractKind = "income" | "expense";
 export type Contract = {
   id: string;
-  number: string;
-  date: string;
+  number: string; // «Д-002/2024»
   counterpartyId: string;
   subject: string;
-  amount: number;
-  validUntil?: string;
+  kind: ContractKind; // Доход / Расход
+  plannedIncome: number;
+  plannedExpense: number;
+  actualIncome: number;
+  actualExpense: number;
   status: ContractStatus;
+  startDate: string;
+  endDate: string;
+  parentId?: string; // субдоговор
 };
+
+export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;
 
 export type Payment = {
   id: string;
@@ -114,16 +122,16 @@ export const DEFAULT_OWN: Own = {
 
 export function seedState(): State {
   const parties: Party[] = [
-    { id: "p1", name: "ООО «ТехноСтрой»", inn: "7701234567", person: "Гаврилов П. С.", bank: "ПАО Сбербанк", bik: "044525225", account: "40702810400000012345" },
-    { id: "p2", name: "ООО «Вектор Плюс»", inn: "7719876543", person: "Ким Д. А.", bank: "АО «АЛЬФА-БАНК»", bik: "044525593", account: "40702810900000067890" },
-    { id: "p3", name: "ООО «СтройГарант»", inn: "5024567890", person: "Мельник О. В." },
+    { id: "p1", name: 'ООО "Альфа"', inn: "7701234567", person: "Гаврилов П. С.", bank: "ПАО Сбербанк", bik: "044525225", account: "40702810400000012345" },
+    { id: "p2", name: 'ООО "Бета"', inn: "7719876543", person: "Ким Д. А.", bank: "АО «АЛЬФА-БАНК»", bik: "044525593", account: "40702810900000067890" },
+    { id: "p3", name: 'ООО "Гамма"', inn: "5024567890", person: "Мельник О. В." },
     { id: "p4", name: "ИП Смирнова Анна Павловна", inn: "772201234567", person: "Смирнова А. П." },
   ];
 
   const contracts: Contract[] = [
-    { id: "c1", number: "07/25", date: d(4) + "-10", counterpartyId: "p2", subject: "Абонентское сопровождение ПТО", amount: 180000, validUntil: d(0) + "-28", status: "active" },
-    { id: "c2", number: "09/25", date: d(3) + "-02", counterpartyId: "p1", subject: "Разработка проектной документации, раздел АР", amount: 63000, status: "active" },
-    { id: "c3", number: "11/25", date: d(1) + "-20", counterpartyId: "p3", subject: "Тендерное сопровождение", amount: 45000, validUntil: d(2) + "-15", status: "active" },
+    { id: "c1", number: "Д-001/2024", counterpartyId: "p1", subject: "Разработка информационной системы", kind: "income", plannedIncome: 500000, plannedExpense: 0, actualIncome: 100000, actualExpense: 0, status: "active", startDate: "2024-01-15", endDate: "2024-12-31" },
+    { id: "c2", number: "Д-002/2024", counterpartyId: "p2", subject: "Техническая поддержка", kind: "income", plannedIncome: 120000, plannedExpense: 0, actualIncome: 30000, actualExpense: 40000, status: "active", startDate: "2024-03-01", endDate: "2024-12-31" },
+    { id: "c3", number: "Д-003/2024", counterpartyId: "p3", subject: "Субподряд на дизайн", kind: "expense", plannedIncome: 0, plannedExpense: 80000, actualIncome: 0, actualExpense: 40000, status: "active", startDate: "2024-02-01", endDate: "2024-12-31", parentId: "c2" },
   ];
 
   const docs: Doc[] = [
@@ -204,14 +212,20 @@ export function loadState(userId: string): State {
       if ((doc.type as string) === "contract") {
         const legacy = doc as unknown as { id: string; number: number; date: string; counterpartyId: string; items: LineItem[] };
         if (!contracts.some((c) => c.id === legacy.id)) {
+          const sum = (legacy.items ?? []).reduce((s, it) => s + (it.qty * it.price || 0), 0);
           contracts.push({
             id: legacy.id,
-            number: String(legacy.number),
-            date: legacy.date,
+            number: "Д-" + String(legacy.number),
             counterpartyId: legacy.counterpartyId,
             subject: legacy.items?.[0]?.name ?? "Договор",
-            amount: (legacy.items ?? []).reduce((s, it) => s + (it.qty * it.price || 0), 0),
+            kind: "income",
+            plannedIncome: sum,
+            plannedExpense: 0,
+            actualIncome: 0,
+            actualExpense: 0,
             status: "active",
+            startDate: legacy.date,
+            endDate: legacy.date,
           });
         }
         return;
@@ -338,9 +352,16 @@ export const STATUS_META: Record<
 export const STATUS_ORDER: DocStatus[] = ["draft", "sent", "signed", "paid"];
 
 export const CONTRACT_STATUS_META: Record<ContractStatus, { label: string; chip: string; dot: string }> = {
-  active: { label: "Действует", chip: "bg-[#e1f3e9] text-[#1f7a4d] border-[#bcdcc9]", dot: "#2e9e6b" },
-  expired: { label: "Истёк", chip: "bg-[#eef1f7] text-[#5c6c84] border-[#d8e0eb]", dot: "#93a2b7" },
-  terminated: { label: "Расторгнут", chip: "bg-[#fbe7e5] text-[#b03a30] border-[#f2c7c3]", dot: "#e05555" },
+  active: { label: "Действующий", chip: "bg-[#E3F2FD] text-[#1565C0] border-transparent", dot: "#1565C0" },
+  completed: { label: "Завершён", chip: "bg-[#E8F5E9] text-[#2E7D32] border-transparent", dot: "#2E7D32" },
+  terminated: { label: "Расторгнут", chip: "bg-[#FFEBEE] text-[#C62828] border-transparent", dot: "#C62828" },
 };
+
+export const CONTRACT_KIND_META: Record<ContractKind, { label: string; chip: string }> = {
+  income: { label: "Доход", chip: "bg-[#E8F5E9] text-[#2E7D32] border-transparent" },
+  expense: { label: "Расход", chip: "bg-[#FFEBEE] text-[#C62828] border-transparent" },
+};
+
+export const CONTRACT_STATUS_ORDER: ContractStatus[] = ["active", "completed", "terminated"];
 
 export const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];

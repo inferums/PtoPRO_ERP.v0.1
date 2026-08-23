@@ -17,6 +17,7 @@ import {
   displayName,
   fmtDate,
   fmtMoney,
+  netProfit,
   STATUS_META,
   TYPE_META,
   type Contract,
@@ -172,7 +173,43 @@ export async function downloadContractDocx(
   payments: Payment[]
 ) {
   const paidTotal = payments.reduce((s, p) => s + p.amount, 0);
-  const baseTotal = contract.amount || docs.reduce((s, d) => s + calc(d).total, 0);
+  const baseTotal = contract.plannedIncome || docs.reduce((s, d) => s + calc(d).total, 0);
+  const profit = netProfit(contract);
+
+  const plTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders,
+    rows: [
+      new TableRow({
+        children: [
+          cell("Показатель", { bold: true, fill: "F2F6FB" }),
+          cell("План", { width: 24, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
+          cell("Факт", { width: 24, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          cell("Доход"),
+          cell(fmtMoney(contract.plannedIncome), { align: AlignmentType.RIGHT }),
+          cell(fmtMoney(contract.actualIncome), { align: AlignmentType.RIGHT, color: "2E7D32" }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          cell("Расход"),
+          cell(fmtMoney(contract.plannedExpense), { align: AlignmentType.RIGHT }),
+          cell(fmtMoney(contract.actualExpense), { align: AlignmentType.RIGHT, color: "C62828" }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          cell("Чистая прибыль", { bold: true }),
+          cell(fmtMoney(contract.plannedIncome - contract.plannedExpense), { align: AlignmentType.RIGHT }),
+          cell(fmtMoney(profit), { align: AlignmentType.RIGHT, bold: true, color: profit >= 0 ? "2E7D32" : "C62828" }),
+        ],
+      }),
+    ],
+  });
 
   const docsRows = docs.map(
     (d) =>
@@ -188,7 +225,7 @@ export async function downloadContractDocx(
 
   const children: Paragraph[] = [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [run(`ДОГОВОР № ${contract.number}`, { size: 30, bold: true })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 360 }, children: [run(`г. Москва · ${fmtDate(contract.date)}`, { color: GREY })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 360 }, children: [run(`${fmtDate(contract.startDate)} — ${fmtDate(contract.endDate)}`, { color: GREY })] }),
     new Paragraph({
       spacing: { after: 240 },
       children: [
@@ -199,19 +236,17 @@ export async function downloadContractDocx(
     }),
     new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("1. Предмет договора", { bold: true })] }),
     new Paragraph({ spacing: { after: 80 }, children: [run(`1.1. Исполнитель обязуется оказать Заказчику услуги: ${contract.subject || "____________________"}, а Заказчик — принять и оплатить их.`)] }),
-    new Paragraph({ spacing: { after: 80 }, children: [run(`1.2. Общая стоимость услуг составляет ${fmtMoney(contract.amount)}. НДС не облагается (УСН).`)] }),
-    new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("2. Порядок оказания услуг", { bold: true })] }),
-    new Paragraph({ spacing: { after: 80 }, children: [run("2.1. Услуги оказываются поэтапно; по факту оказания направляются счёт и акт выполненных работ.")] }),
-    new Paragraph({
-      spacing: { after: 80 },
-      children: [run(`2.2. Договор действует ${contract.validUntil ? "до " + fmtDate(contract.validUntil) : "до полного исполнения обязательств Сторонами"}.`)],
-    }),
+    new Paragraph({ spacing: { after: 80 }, children: [run(`1.2. Тип договора: ${contract.kind === "income" ? "Доход" : "Расход"}.`)] }),
+    new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("2. Финансовые показатели (план / факт)", { bold: true })] }),
+    new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("3. Порядок оказания услуг", { bold: true })] }),
+    new Paragraph({ spacing: { after: 80 }, children: [run("3.1. Услуги оказываются поэтапно; по факту оказания направляются счёт и акт выполненных работ.")] }),
+    new Paragraph({ spacing: { after: 80 }, children: [run(`3.2. Договор действует с ${fmtDate(contract.startDate)} по ${fmtDate(contract.endDate)}.`)] }),
     new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("3. Стоимость и порядок расчётов", { bold: true })] }),
     new Paragraph({ spacing: { after: 80 }, children: [run("3.1. Оплата — в течение 5 банковских дней с момента подписания акта.")] }),
     new Paragraph({ spacing: { after: 80 }, children: [run("3.2. Документы, выставленные в рамках договора:")] }),
   ];
 
-  const tables: Table[] = [];
+  const tables: Table[] = [plTable];
   if (docsRows.length) {
     tables.push(
       new Table({

@@ -648,6 +648,7 @@ export default function App() {
           )}
           own={state.own}
           parties={state.parties}
+          parents={state.contracts.filter((c) => !c.parentId && c.id !== previewContract.id).map((c) => ({ id: c.id, number: c.number }))}
           onClose={() => setContractId(null)}
           onStatus={setContractStatus}
           onUpdate={upsertContract}
