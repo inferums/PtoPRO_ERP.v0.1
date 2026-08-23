@@ -1,6 +1,6 @@
 export type View = "dashboard" | "contracts" | "invoices" | "acts" | "finance" | "letters" | "parties" | "settings";
 export type DocType = "invoice" | "act";
-export type DocStatus = "draft" | "sent" | "signed" | "paid";
+export type DocStatus = "draft" | "sent" | "signed" | "paid_partial" | "paid";
 
 export type LineItem = { id: string; name: string; qty: number; unit: string; price: number };
 
@@ -342,15 +342,16 @@ export const TYPE_META: Record<DocType, { label: string; title: string; short: s
 
 export const STATUS_META: Record<
   DocStatus,
-  { label: string; next: DocStatus | null; nextLabel: string; chip: string; dot: string }
+  { label: string; next: DocStatus | null; nextLabel: string; altNext?: DocStatus; altLabel?: string; chip: string; dot: string }
 > = {
   draft: { label: "Черновик", next: "sent", nextLabel: "Отправить", chip: "bg-[#eef1f7] text-[#5c6c84] border-[#d8e0eb]", dot: "#93a2b7" },
-  sent: { label: "Отправлен", next: "signed", nextLabel: "Подписан", chip: "bg-[#fbf0dc] text-[#a96f14] border-[#f0dbb4]", dot: "#e8a23d" },
-  signed: { label: "Подписан", next: "paid", nextLabel: "Оплачен", chip: "bg-[#e3f0fc] text-[#1567c2] border-[#bfd9f2]", dot: "#1e88e5" },
+  sent: { label: "Отправлен", next: "signed", nextLabel: "Подписан", altNext: "paid_partial", altLabel: "Частично", chip: "bg-[#fbf0dc] text-[#a96f14] border-[#f0dbb4]", dot: "#e8a23d" },
+  signed: { label: "Подписан", next: "paid", nextLabel: "Оплачен", altNext: "paid_partial", altLabel: "Частично", chip: "bg-[#e3f0fc] text-[#1567c2] border-[#bfd9f2]", dot: "#1e88e5" },
+  paid_partial: { label: "Частично оплачен", next: "paid", nextLabel: "Оплачен", chip: "bg-[#e0f2f1] text-[#00796b] border-[#b2dfdb]", dot: "#26a69a" },
   paid: { label: "Оплачен", next: null, nextLabel: "", chip: "bg-[#e1f3e9] text-[#1f7a4d] border-[#bcdcc9]", dot: "#2e9e6b" },
 };
 
-export const STATUS_ORDER: DocStatus[] = ["draft", "sent", "signed", "paid"];
+export const STATUS_ORDER: DocStatus[] = ["draft", "sent", "signed", "paid_partial", "paid"];
 
 export const CONTRACT_STATUS_META: Record<ContractStatus, { label: string; chip: string; dot: string }> = {
   active: { label: "Действующий", chip: "bg-[#E3F2FD] text-[#1565C0] border-transparent", dot: "#1565C0" },
