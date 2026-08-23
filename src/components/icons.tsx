@@ -129,6 +129,49 @@ export const IconExit = (p: P) => (
   </Svg>
 );
 
+export const IconReceipt = (p: P) => (
+  <Svg {...p}>
+    <path d="M4.5 2.8v14.4l1.8-.9 1.7.9 2-.9 2 .9 1.7-.9 1.8.9V2.8l-1.8.9-1.7-.9-2 .9-2-.9-1.7.9z" />
+    <path d="M8 8h4.5M8 11.2h3" />
+  </Svg>
+);
+
+export const IconClipboard = (p: P) => (
+  <Svg {...p}>
+    <rect x="4" y="4" width="12" height="13.4" />
+    <rect x="7.4" y="2.4" width="5.2" height="3" />
+    <path d="m7.6 11.4 1.8 1.8 3.4-3.6" />
+  </Svg>
+);
+
+export const IconSwap = (p: P) => (
+  <Svg {...p}>
+    <path d="M7 4 3.6 7.2 7 10.4M3.6 7.2H16.4" />
+    <path d="m13 9.6 3.4 3.2-3.4 3.2M16.4 12.8H3.6" />
+  </Svg>
+);
+
+export const IconLogout = (p: P) => (
+  <Svg {...p}>
+    <path d="m13.2 13.4 3.6-3.4-3.6-3.4M16.8 10H7.6" />
+    <path d="M9.2 16.8H4.4V3.2h4.8" />
+  </Svg>
+);
+
+export const IconMonitor = (p: P) => (
+  <Svg {...p}>
+    <rect x="2.8" y="4" width="14.4" height="9.4" />
+    <path d="M7 16.8h6M10 13.4v3.4" />
+  </Svg>
+);
+
+export const IconPhone = (p: P) => (
+  <Svg {...p}>
+    <rect x="5.6" y="2.8" width="8.8" height="14.4" />
+    <path d="M9.2 14.6h1.6" />
+  </Svg>
+);
+
 export function Logo({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">

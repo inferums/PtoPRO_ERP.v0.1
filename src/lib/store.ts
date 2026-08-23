@@ -1,4 +1,4 @@
-export type View = "dashboard" | "docs" | "contracts" | "payments" | "letters" | "parties" | "settings";
+export type View = "dashboard" | "contracts" | "invoices" | "acts" | "finance" | "letters" | "parties" | "settings";
 export type DocType = "invoice" | "act";
 export type DocStatus = "draft" | "sent" | "signed" | "paid";
 

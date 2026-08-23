@@ -71,7 +71,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
         <div className="flex items-center gap-3.5">
           <Logo size={46} />
           <div>
-            <p className="font-display text-[17px] font-extrabold tracking-wide text-ink">ИП Документы</p>
+            <p className="font-display text-[17px] font-extrabold tracking-wide text-ink">PtoPRO-ERP</p>
             <p className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-dim">система документооборота</p>
           </div>
         </div>

@@ -29,42 +29,49 @@ import DocumentForm from "./components/DocumentForm";
 import DocumentPreview from "./components/DocumentPreview";
 import Contracts from "./components/Contracts";
 import ContractDetail from "./components/ContractDetail";
-import Payments from "./components/Payments";
+import Finance from "./components/Finance";
 import Letters from "./components/Letters";
 import Counterparties from "./components/Counterparties";
 import {
   Logo,
   IconGrid,
   IconContract,
-  IconCoin,
+  IconReceipt,
+  IconClipboard,
+  IconSwap,
   IconLetter,
   IconPeople,
   IconSliders,
   IconPlus,
   IconDownload,
-  IconExit,
+  IconLogout,
+  IconMonitor,
+  IconPhone,
 } from "./components/icons";
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 type Toast = { id: number; text: string; tone: "ok" | "err" };
 
 const NAV: { id: View; label: string; icon: (p: { size?: number }) => ReactNode }[] = [
-  { id: "dashboard", label: "Обзор", icon: (p) => <IconGrid {...p} /> },
+  { id: "dashboard", label: "Главная", icon: (p) => <IconGrid {...p} /> },
   { id: "contracts", label: "Договоры", icon: (p) => <IconContract {...p} /> },
-  { id: "payments", label: "Оплаты", icon: (p) => <IconCoin {...p} /> },
+  { id: "invoices", label: "Счета", icon: (p) => <IconReceipt {...p} /> },
+  { id: "acts", label: "Акты", icon: (p) => <IconClipboard {...p} /> },
+  { id: "finance", label: "Доходы и расходы", icon: (p) => <IconSwap {...p} /> },
   { id: "letters", label: "Письма", icon: (p) => <IconLetter {...p} /> },
   { id: "parties", label: "Контрагенты", icon: (p) => <IconPeople {...p} /> },
-  { id: "settings", label: "Реквизиты", icon: (p) => <IconSliders {...p} /> },
+  { id: "settings", label: "Настройки", icon: (p) => <IconSliders {...p} /> },
 ];
 
 const TITLES: Record<View, { t: string; s: string }> = {
-  dashboard: { t: "Обзор", s: "сводка по документам и оплатам" },
-  docs: { t: "Документы", s: "счета · акты" },
-  contracts: { t: "Договоры", s: "действующие соглашения с контрагентами" },
-  payments: { t: "Оплаты", s: "полученные платежи по документам" },
+  dashboard: { t: "Главная", s: "сводка по договорам, счетам и оплатам" },
+  contracts: { t: "Договоры", s: "доходные и расходные соглашения" },
+  invoices: { t: "Счета", s: "счета на оплату по договорам" },
+  acts: { t: "Акты", s: "акты выполненных работ" },
+  finance: { t: "Доходы и расходы", s: "план · факт · чистая прибыль" },
   letters: { t: "Письма", s: "входящая и исходящая переписка" },
   parties: { t: "Контрагенты", s: "база покупателей и заказчиков" },
-  settings: { t: "Реквизиты", s: "данные ИП для шапки и колонтитулов" },
+  settings: { t: "Настройки", s: "реквизиты, резервные копии, среда" },
 };
 
 /* ---------- реквизиты ---------- */
@@ -255,6 +262,25 @@ export default function App() {
   const [editing, setEditing] = useState<Doc | null | "new">(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
+  const [mobileMode, setMobileMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("ip-dok-v2:mobileui") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleMobileMode = () => {
+    setMobileMode((m) => {
+      const next = !m;
+      try {
+        localStorage.setItem("ip-dok-v2:mobileui", next ? "1" : "0");
+      } catch {
+        /* приватный режим */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (session) saveState(state, session.userId);
@@ -443,81 +469,132 @@ export default function App() {
     );
   }
 
+  /* переход по меню: всегда закрывает открытый договор, чтобы смена вкладки сработала */
+  const go = (id: View) => {
+    setContractId(null);
+    setView(id);
+  };
+
   const navBtn = (n: (typeof NAV)[number], mobile = false) => {
-    const active = view === n.id;
+    const active = view === n.id && !previewContract;
     return (
       <button
         key={n.id}
-        onClick={() => setView(n.id)}
-        className={`relative flex cursor-pointer items-center gap-3 transition-all duration-200 ${
+        onClick={() => go(n.id)}
+        title={mobile ? undefined : n.label}
+        className={`flex cursor-pointer items-center whitespace-nowrap transition-all duration-200 ${
           mobile
-            ? `shrink-0 border-b-2 px-3 pb-2.5 pt-1 font-mono text-[11px] uppercase tracking-[0.1em] ${
+            ? `shrink-0 gap-1.5 border-b-2 px-3 pb-2.5 pt-1 font-mono text-[11px] uppercase tracking-[0.08em] ${
                 active ? "border-brand text-white" : "border-transparent text-white/55 hover:text-white/85"
               }`
-            : `w-full px-3.5 py-2.5 text-left text-[13.5px] font-medium ${
-                active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+            : `w-full gap-3 rounded-xl py-2.5 text-sm font-medium group-hover/side:px-4 ${
+                active
+                  ? "bg-[#1E88E5] px-4 text-white shadow-md"
+                  : "px-0 text-white/70 hover:bg-white/10 hover:text-white group-hover/side:justify-start justify-center"
               }`
         }`}
       >
-        {!mobile && active && <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-r bg-brand" />}
-        {n.icon({ size: 17 })}
-        {n.label}
-        {n.id === "docs" && !mobile && (
-          <span className={`ml-auto border px-1.5 py-px font-mono text-[10px] ${active ? "border-white/25 text-white/80" : "border-white/15 text-white/45"}`}>
-            {state.docs.length}
-          </span>
-        )}
+        <span className="shrink-0">{n.icon({ size: 16 })}</span>
+        <span
+          className={`overflow-hidden transition-all duration-200 ${
+            mobile ? "" : active ? "max-w-[150px] opacity-100" : "max-w-0 opacity-0 group-hover/side:max-w-[150px] group-hover/side:opacity-100"
+          }`}
+        >
+          {n.label}
+        </span>
       </button>
     );
   };
 
   return (
     <div className="min-h-screen bg-bg text-ink">
-      {/* сайдбар (desktop) */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col bg-navy md:flex">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <Logo size={38} />
-          <div>
-            <p className="font-display text-[13px] font-bold leading-tight tracking-wide text-white">ИП Документы</p>
-            <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-white/40">документооборот</p>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1 px-3 pt-2">{NAV.map((n) => navBtn(n))}</nav>
-        <div className="border-t border-white/10 px-5 py-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-[12.5px] font-semibold text-white">{session.email}</p>
-              <p className="mt-0.5 truncate font-mono text-[10px] text-white/40">{state.own.short}</p>
+      {/* сайдбар: свёрнут до иконок, раскрывается при наведении */}
+      <aside
+        className={`group/side fixed inset-y-0 left-0 z-40 flex-col overflow-hidden bg-[#323233] shadow-xl transition-[width] duration-300 ease-out hover:w-60 ${
+          mobileMode ? "hidden" : "hidden w-[68px] md:flex"
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="border-b border-white/10 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-md">
+                <Logo size={36} />
+              </div>
+              <span className="whitespace-nowrap text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">
+                PtoPRO-ERP
+              </span>
             </div>
-            <button onClick={logout} className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:border-danger hover:text-danger" title="Выйти">
-              <IconExit size={14} />
-            </button>
           </div>
-          {installEvt ? (
-            <button
-              onClick={install}
-              className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 bg-brand py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-            >
-              <IconDownload size={13} /> установить приложение
-            </button>
-          ) : (
-            <p className="mt-3 flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.12em] text-white/35">
-              <span className="pulse-soft h-1.5 w-1.5 rounded-full bg-paid" /> pwa · offline-режим
-            </p>
-          )}
+
+          <nav className="flex-1 space-y-1 overflow-y-auto p-3">{NAV.map((n) => navBtn(n))}</nav>
+
+          <div className="border-t border-white/10 p-4">
+            <div className="mb-3 flex items-center justify-center gap-2 group-hover/side:justify-between">
+              <span className="text-xs text-white/60 opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">ПК</span>
+              <div className="flex items-center gap-1.5">
+                <IconMonitor size={14} className="text-white/60" />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={mobileMode}
+                  onClick={toggleMobileMode}
+                  title="Мобильная версия интерфейса"
+                  className={`inline-flex h-[1.15rem] w-8 shrink-0 cursor-pointer items-center rounded-full border border-transparent shadow-xs transition-all ${
+                    mobileMode ? "bg-[#1E88E5]" : "bg-white/20"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none block size-4 rounded-full bg-white ring-0 transition-transform ${
+                      mobileMode ? "translate-x-[calc(100%-2px)]" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+                <IconPhone size={14} className="text-white/60" />
+              </div>
+              <span className="text-xs text-white/60 opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">Тел</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-sm text-white/70 opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">
+                {state.own.short}
+              </span>
+              {installEvt && (
+                <button
+                  onClick={install}
+                  title="Установить приложение"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <IconDownload size={15} />
+                </button>
+              )}
+              <button
+                onClick={logout}
+                title="Выйти"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-white/50 transition-colors hover:bg-white/10 hover:text-danger"
+              >
+                <IconLogout size={15} />
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* мобильная шапка */}
-      <div className="sticky top-0 z-40 bg-navy md:hidden">
+      {/* мобильная шапка (на телефонах всегда; на ПК — когда включён мобильный режим) */}
+      <div className={`sticky top-0 z-40 bg-[#323233] shadow-lg ${mobileMode ? "" : "md:hidden"}`}>
         <div className="flex items-center justify-between px-4 pb-2 pt-3">
           <div className="flex items-center gap-2.5">
             <Logo size={32} />
-            <p className="font-display text-[13px] font-bold tracking-wide text-white">ИП Документы</p>
+            <p className="text-sm font-semibold text-white">PtoPRO-ERP</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={logout} className="cursor-pointer border border-white/15 p-2 text-white/60" title="Выйти">
-              <IconExit size={14} />
+            <button
+              onClick={toggleMobileMode}
+              className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:text-white"
+              title="Вернуть десктопную версию"
+            >
+              <IconMonitor size={14} />
+            </button>
+            <button onClick={logout} className="cursor-pointer border border-white/15 p-2 text-white/60 transition-colors hover:text-danger" title="Выйти">
+              <IconLogout size={14} />
             </button>
             <button
               onClick={() => setEditing("new")}
@@ -531,7 +608,7 @@ export default function App() {
       </div>
 
       {/* контент */}
-      <main className="relative md:pl-60">
+      <main className={`relative ${mobileMode ? "" : "md:pl-[68px]"}`}>
         <div aria-hidden="true" className="bg-dots pointer-events-none absolute inset-0" />
         <div className="relative">
           <div className="sticky top-0 z-30 hidden border-b border-line bg-bg/95 px-8 py-4 backdrop-blur-sm md:flex md:items-center md:justify-between">
@@ -589,14 +666,15 @@ export default function App() {
                 parties={state.parties}
                 onOpen={(id) => setPreviewId(id)}
                 onNew={() => setEditing("new")}
-                onGoDocs={() => setView("contracts")}
+                onGoDocs={() => go("contracts")}
               />
             )}
-            {view === "docs" && (
+            {(view === "invoices" || view === "acts") && (
               <Documents
                 docs={state.docs}
                 parties={state.parties}
                 contracts={state.contracts.map((c) => ({ id: c.id, number: c.number }))}
+                typeFilter={view === "invoices" ? "invoice" : "act"}
                 onPreview={(id) => setPreviewId(id)}
                 onEdit={(d) => setEditing(d)}
                 onNew={() => setEditing("new")}
@@ -614,7 +692,16 @@ export default function App() {
                 onOpen={(id) => setContractId(id)}
               />
             )}
-            {view === "payments" && <Payments payments={state.payments} docs={state.docs} parties={state.parties} onAdd={addPayment} />}
+            {view === "finance" && (
+              <Finance
+                contracts={state.contracts}
+                docs={state.docs}
+                payments={state.payments}
+                parties={state.parties}
+                onAddPayment={addPayment}
+                onOpenContract={(id) => setContractId(id)}
+              />
+            )}
             {view === "letters" && <Letters letters={state.letters} parties={state.parties} onAdd={addLetter} />}
             {view === "parties" && (
               <Counterparties parties={state.parties} docs={state.docs} onUpsert={upsertParty} onDelete={deleteParty} />
@@ -669,6 +756,7 @@ export default function App() {
           parties={state.parties}
           contracts={state.contracts.map((c) => ({ id: c.id, number: c.number, subject: c.subject }))}
           fallbackNumber={nextNumber(state.docs)}
+          forcedType={view === "acts" ? "act" : view === "invoices" ? "invoice" : undefined}
           onSave={saveDoc}
           onClose={() => setEditing(null)}
         />
