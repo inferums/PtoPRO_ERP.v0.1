@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   fmtMoney,
   todayISO,
@@ -9,7 +9,8 @@ import {
   type LineItem,
   type Party,
 } from "../lib/store";
-import { IconClose, IconPlus, IconTrash } from "./icons";
+import Modal from "./Modal";
+import { IconPlus, IconTrash } from "./icons";
 
 const emptyItem = (): LineItem => ({ id: uid(), name: "", qty: 1, unit: "шт", price: 0 });
 
@@ -38,12 +39,6 @@ export default function DocumentForm({
   const [note, setNote] = useState(initial?.note ?? "");
   const [items, setItems] = useState<LineItem[]>(initial ? initial.items.map((i) => ({ ...i })) : [emptyItem()]);
   const [errors, setErrors] = useState<{ party?: string; items?: string }>({});
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
 
   const subtotal = items.reduce((s, it) => s + it.qty * it.price, 0);
   const vatSum = vat ? Math.round((subtotal * 20) / 120) : 0;
@@ -79,23 +74,14 @@ export default function DocumentForm({
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <div className="overlay-in fixed inset-0 z-50 overflow-y-auto bg-navy/60 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-in mx-auto my-6 w-full max-w-3xl border border-line bg-surface shadow-[0_40px_90px_-30px_rgba(14,36,60,0.55)]">
-        <div className="flex items-center justify-between border-b border-line px-6 py-4">
-          <div>
-            <h3 className="font-display text-[17px] font-extrabold text-ink">
-              {initial ? `${TYPE_META[initial.type]?.label ?? "Документ"} № ${initial.number}` : "Новый документ"}
-            </h3>
-            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-dim">
-              {initial ? "редактирование" : `будет присвоен № ${fallbackNumber}`}
-            </p>
-          </div>
-          <button onClick={onClose} className="cursor-pointer border border-line p-2 text-mut transition-colors hover:border-navy hover:text-navy">
-            <IconClose size={14} />
-          </button>
-        </div>
-
-        <div className="grid gap-5 px-6 py-6 sm:grid-cols-2">
+    <Modal
+      title={initial ? `${TYPE_META[initial.type]?.label ?? "Документ"} № ${initial.number}` : "Новый документ"}
+      subtitle={initial ? "редактирование" : `будет присвоен № ${fallbackNumber}`}
+      onClose={onClose}
+      width="max-w-3xl"
+      tall
+    >
+      <div className="grid gap-5 px-6 py-5 sm:grid-cols-2">
           {forcedType ? (
             <div>
               <span className={lbl}>Тип документа</span>
@@ -188,7 +174,7 @@ export default function DocumentForm({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line bg-soft px-6 py-4">
+        <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-4 border-t border-line bg-soft px-6 py-4">
           <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-mut">
             <input type="checkbox" checked={vat} onChange={(e) => setVat(e.target.checked)} className="h-4 w-4 accent-[#1e88e5]" />
             НДС 20 % (в т.ч.)
@@ -203,12 +189,11 @@ export default function DocumentForm({
             <button onClick={onClose} className="cursor-pointer border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:text-ink">
               отмена
             </button>
-            <button onClick={submit} className="cursor-pointer bg-brand px-6 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-all hover:bg-brand2 hover:shadow-[0_8px_24px_-8px_rgba(30,136,229,0.6)]">
+            <button onClick={submit} className="cursor-pointer rounded-md bg-brand px-6 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-all hover:bg-brand2 hover:shadow-[0_8px_24px_-8px_rgba(30,136,229,0.6)]">
               сохранить
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

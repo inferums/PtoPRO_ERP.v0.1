@@ -14,7 +14,8 @@ import {
   type Doc,
   type Party,
 } from "../lib/store";
-import { IconClose, IconContract } from "./icons";
+import Modal from "./Modal";
+import { IconContract } from "./icons";
 
 export function ContractForm({
   initial,
@@ -50,15 +51,13 @@ export function ContractForm({
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <div className="overlay-in fixed inset-0 z-[60] grid place-items-center overflow-y-auto bg-navy/70 p-4" onClick={onClose}>
-      <div className="modal-in w-full max-w-2xl border border-line bg-surface p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-[16px] font-bold text-ink">{initial ? `Договор ${initial.number}` : "Новый договор"}</h3>
-          <button onClick={onClose} className="cursor-pointer border border-line p-2 text-mut hover:border-navy hover:text-navy">
-            <IconClose size={14} />
-          </button>
-        </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+    <Modal
+      title={initial ? `Договор ${initial.number}` : "Новый договор"}
+      subtitle={initial ? "редактирование" : "доходный или расходный"}
+      onClose={onClose}
+      width="max-w-2xl"
+    >
+      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           <div>
             <label className={lbl}>Номер</label>
             <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Д-004/2024" className={inp} />
@@ -124,19 +123,18 @@ export function ContractForm({
             </select>
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-2.5">
-          <button onClick={onClose} className="cursor-pointer border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut hover:text-ink">
+        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
+          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
             отмена
           </button>
           <button
             onClick={() => f.number.trim() && onSave(f)}
-            className="cursor-pointer bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
           >
             сохранить
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
