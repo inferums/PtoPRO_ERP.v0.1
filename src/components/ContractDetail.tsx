@@ -6,6 +6,7 @@ import {
   fmtDate,
   fmtMoney,
   netProfit,
+  suggestPaymentName,
   STATUS_META,
   todayISO,
   TYPE_META,
@@ -318,9 +319,8 @@ export default function ContractDetail({
           <div className="flex justify-end">
             <button
               onClick={() => setPayForm({ mode: "add" })}
-              disabled={docs.length === 0}
-              className="flex cursor-pointer items-center gap-1.5 rounded-md bg-paid px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#268257] disabled:cursor-not-allowed disabled:opacity-50"
-              title={docs.length === 0 ? "Сначала создайте счёт или акт по договору" : ""}
+              className="flex cursor-pointer items-center gap-1.5 rounded-md bg-paid px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#268257]"
+              title="Оплату можно привязать к счёту/акту или оставить без привязки"
             >
               <IconPlus size={13} /> оплата
             </button>
@@ -338,13 +338,10 @@ export default function ContractDetail({
                   <IconCoin size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold text-ink">
-                    {p.method}
-                    {pDoc ? <span className="ml-2 font-mono text-[10.5px] font-normal text-brand">№ {pDoc.number}</span> : null}
-                  </span>
+                  <span className="block truncate text-[13px] font-semibold text-ink" title={p.name}>{p.name}</span>
                   <span className="font-mono text-[10.5px] text-dim">
-                    {fmtDate(p.date)}
-                    {p.comment ? ` · ${p.comment}` : ""}
+                    {fmtDate(p.date)} · {p.method}
+                    {pDoc ? ` · № ${pDoc.number}` : ""}
                   </span>
                 </span>
                 <span className="font-mono text-[13.5px] font-bold text-[#2E7D32]">{fmtMoney(p.amount)}</span>
@@ -390,6 +387,7 @@ export default function ContractDetail({
                       label: `${TYPE_META[d.type].label} № ${d.number} · ${fmtMoney(calc(d).total)}`,
                       total: calc(d).total,
                       paid: paidByDoc.get(d.id) ?? 0,
+                      suggestedName: suggestPaymentName(d, contract),
                     }))
                   : undefined
               }

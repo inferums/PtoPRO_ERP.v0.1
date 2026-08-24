@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fmtDate, todayISO, uid, type Letter, type Party } from "../lib/store";
-import { IconClose, IconLetter, IconPlus } from "./icons";
+import Modal from "./Modal";
+import { IconLetter, IconPlus } from "./icons";
 
 function Form({ parties, onSave, onClose }: { parties: Party[]; onSave: (l: Letter) => void; onClose: () => void }) {
   const [f, setF] = useState<Letter>({
@@ -17,15 +18,8 @@ function Form({ parties, onSave, onClose }: { parties: Party[]; onSave: (l: Lett
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <div className="overlay-in fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-navy/70 p-4" onClick={onClose}>
-      <div className="modal-in w-full max-w-lg border border-line bg-surface p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-[16px] font-bold text-ink">Новое письмо</h3>
-          <button onClick={onClose} className="cursor-pointer border border-line p-2 text-mut hover:border-navy hover:text-navy">
-            <IconClose size={14} />
-          </button>
-        </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+    <Modal title="Новое письмо" subtitle="входящее или исходящее" onClose={onClose}>
+      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           <div>
             <label className={lbl}>Номер</label>
             <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="исх-32" className={inp} />

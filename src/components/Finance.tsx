@@ -4,6 +4,7 @@ import {
   fmtMoney,
   fmtDate,
   netProfit,
+  suggestPaymentName,
   type Contract,
   type Doc,
   type Party,
@@ -107,9 +108,8 @@ export default function Finance({
           <h3 className="font-display text-[14px] font-bold text-ink">Реестр платежей · {payments.length}</h3>
           <button
             onClick={() => setPayForm({ mode: "add" })}
-            disabled={docs.length === 0}
-            className="flex cursor-pointer items-center gap-2 bg-paid px-3.5 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#268257] disabled:cursor-not-allowed disabled:opacity-50"
-            title={docs.length === 0 ? "Сначала создайте документ" : ""}
+            className="flex cursor-pointer items-center gap-2 rounded-md bg-paid px-3.5 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#268257]"
+            title="Оплату можно привязать к документу или оставить без привязки"
           >
             <IconPlus size={12} /> оплата
           </button>
@@ -117,7 +117,7 @@ export default function Finance({
         <table className="w-full min-w-[720px] border-collapse text-left">
           <thead>
             <tr className="border-b border-line bg-soft">
-              {["Дата", "Документ", "Контрагент", "Способ", "Комментарий", "Сумма", ""].map((h, i) => (
+              {["Дата", "Наименование", "Документ", "Контрагент", "Способ", "Сумма", ""].map((h, i) => (
                 <th key={i} className={`px-3 py-2.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.12em] text-dim ${i === 5 ? "text-right" : ""}`}>{h}</th>
               ))}
             </tr>
@@ -128,10 +128,10 @@ export default function Finance({
               return (
                 <tr key={p.id} className="group transition-colors hover:bg-soft">
                   <td className="px-3 py-3 font-mono text-[12px] text-mut">{fmtDate(p.date)}</td>
+                  <td className="max-w-[240px] truncate px-3 py-3 text-[13px] font-medium text-ink" title={p.name}>{p.name}</td>
                   <td className="px-3 py-3 font-mono text-[12.5px] font-semibold text-ink">{doc ? `№ ${doc.number}` : "—"}</td>
-                  <td className="max-w-[200px] truncate px-3 py-3 text-[13px] font-medium text-ink">{doc ? partyName(doc.counterpartyId) : "—"}</td>
+                  <td className="max-w-[180px] truncate px-3 py-3 text-[13px] text-mut">{doc ? partyName(doc.counterpartyId) : "—"}</td>
                   <td className="px-3 py-3 text-[12.5px] text-mut">{p.method}</td>
-                  <td className="max-w-[170px] truncate px-3 py-3 text-[12px] text-dim">{p.comment ?? "—"}</td>
                   <td className="px-3 py-3 text-right font-mono text-[12.5px] font-semibold text-paid">{fmtMoney(p.amount)}</td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -186,6 +186,7 @@ export default function Finance({
                   label: `№ ${d.number} · ${partyName(d.counterpartyId)} · ${fmtMoney(calc(d).total)}`,
                   total: calc(d).total,
                   paid: paidByDoc.get(d.id) ?? 0,
+                  suggestedName: suggestPaymentName(d, contracts.find((c) => c.id === d.contractId)),
                 }))
               : undefined
           }

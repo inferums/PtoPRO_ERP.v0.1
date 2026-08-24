@@ -66,12 +66,19 @@ export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;
 
 export type Payment = {
   id: string;
-  docId: string;
+  docId: string; // пустая строка — оплата не привязана к документу
   date: string;
   amount: number;
   method: string;
-  comment?: string;
+  name: string; // наименование платежа
 };
+
+/* авто-наименование платежа: из договора или из документа */
+export function suggestPaymentName(doc?: Doc, contract?: Contract): string {
+  if (contract) return `Оплата по договору №${contract.number} от ${fmtDate(contract.startDate)}`;
+  if (doc) return `Оплата по ${TYPE_META[doc.type]?.label.toLowerCase() ?? "документу"} №${doc.number} от ${fmtDate(doc.date)}`;
+  return "";
+}
 
 export type Letter = {
   id: string;
@@ -168,10 +175,10 @@ export function seedState(): State {
   ];
 
   const payments: Payment[] = [
-    { id: "pay1", docId: "d5", date: d(1) + "-26", amount: 32000, method: "Банковский перевод" },
-    { id: "pay2", docId: "d8", date: d(1) + "-08", amount: 6000, method: "Банковский перевод" },
-    { id: "pay3", docId: "d9", date: d(3) + "-25", amount: 63000, method: "Банковский перевод", comment: "по договору 09/25" },
-    { id: "pay4", docId: "d10", date: d(4) + "-28", amount: 9000, method: "Банковский перевод" },
+    { id: "pay1", docId: "d5", date: d(1) + "-26", amount: 32000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d5"), contracts.find((c) => c.id === "c2")) },
+    { id: "pay2", docId: "d8", date: d(1) + "-08", amount: 6000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d8")) },
+    { id: "pay3", docId: "d9", date: d(3) + "-25", amount: 63000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d9"), contracts.find((c) => c.id === "c2")) },
+    { id: "pay4", docId: "d10", date: d(4) + "-28", amount: 9000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d10"), contracts.find((c) => c.id === "c1")) },
   ];
 
   const letters: Letter[] = [
@@ -239,7 +246,16 @@ export function loadState(userId: string): State {
       docs,
       parties: Array.isArray(parsed.parties) ? parsed.parties : [],
       contracts,
-      payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+      payments: Array.isArray(parsed.payments)
+        ? (parsed.payments as Record<string, unknown>[]).map((p) => ({
+            id: String(p.id ?? uid()),
+            docId: String(p.docId ?? ""),
+            date: String(p.date ?? todayISO()),
+            amount: Number(p.amount ?? 0),
+            method: String(p.method ?? "Банковский перевод"),
+            name: String(p.name ?? p.comment ?? "Оплата"),
+          }))
+        : [],
       letters: Array.isArray(parsed.letters) ? parsed.letters : [],
       own: { ...empty.own, ...(parsed.own ?? {}) },
     };

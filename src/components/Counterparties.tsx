@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { calc, fmtMoney, uid, type Doc, type Party } from "../lib/store";
-import { IconClose, IconPencil, IconPeople, IconPlus, IconTrash } from "./icons";
+import Modal from "./Modal";
+import { IconPencil, IconPeople, IconPlus, IconTrash } from "./icons";
 
 function Form({ initial, onSave, onClose }: { initial: Party | null; onSave: (p: Party) => void; onClose: () => void }) {
   const [f, setF] = useState<Party>(initial ?? { id: uid(), name: "" });
@@ -9,15 +10,8 @@ function Form({ initial, onSave, onClose }: { initial: Party | null; onSave: (p:
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <div className="overlay-in fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-navy/70 p-4" onClick={onClose}>
-      <div className="modal-in w-full max-w-lg border border-line bg-surface p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-[16px] font-bold text-ink">{initial ? "Контрагент" : "Новый контрагент"}</h3>
-          <button onClick={onClose} className="cursor-pointer border border-line p-2 text-mut hover:border-navy hover:text-navy">
-            <IconClose size={14} />
-          </button>
-        </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+    <Modal title={initial ? "Контрагент" : "Новый контрагент"} subtitle={initial ? "редактирование" : "карточка в базе"} onClose={onClose}>
+      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={lbl}>Наименование</label>
             <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ООО «Ромашка»" className={inp} />
@@ -43,19 +37,18 @@ function Form({ initial, onSave, onClose }: { initial: Party | null; onSave: (p:
             <input value={f.account ?? ""} onChange={(e) => setF({ ...f, account: e.target.value })} className={inp} />
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-2.5">
-          <button onClick={onClose} className="cursor-pointer border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut hover:text-ink">
+        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
+          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
             отмена
           </button>
           <button
             onClick={() => f.name.trim() && onSave({ ...f, name: f.name.trim() })}
-            className="cursor-pointer bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
           >
             сохранить
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

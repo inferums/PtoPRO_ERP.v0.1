@@ -8,6 +8,8 @@ import {
   nextNumber,
   todayISO,
   uid,
+  fmtMoney,
+  suggestPaymentName,
   STATUS_META,
   CONTRACT_STATUS_META,
   type Contract,
@@ -332,6 +334,8 @@ export default function App() {
       const total = doc.items.reduce((sm, it) => sm + it.qty * it.price, 0);
       const paidSum = state.payments.filter((p) => p.docId === id).reduce((sm, p) => sm + p.amount, 0);
       const rest = Math.max(total - paidSum, 0);
+      const contract = state.contracts.find((c) => c.id === doc.contractId);
+      const autoName = suggestPaymentName(doc, contract);
       setState((st) => ({
         ...st,
         payments:
@@ -344,7 +348,7 @@ export default function App() {
                   date: todayISO(),
                   amount: rest,
                   method: "Банковский перевод",
-                  comment: "автоматически по статусу «Оплачен»",
+                  name: autoName,
                 },
               ]
             : st.payments,
@@ -795,27 +799,38 @@ export default function App() {
       </main>
 
       {/* оверлеи */}
-      {previewDoc && (
-        <DocumentPreview
-          doc={previewDoc}
-          party={state.parties.find((p) => p.id === previewDoc.counterpartyId)}
-          own={state.own}
-          contract={(() => {
-            const c = state.contracts.find((x) => x.id === previewDoc.contractId);
-            return c ? { number: c.number, subject: c.subject } : undefined;
-          })()}
-          payments={state.payments.filter((p) => p.docId === previewDoc.id)}
-          onClose={() => setPreviewId(null)}
-          onStatus={setStatus}
-          onEdit={(d) => {
-            setPreviewId(null);
-            setEditing(d);
-          }}
-          onAddPayment={(amount) =>
-            addPayment({ id: uid(), docId: previewDoc.id, date: todayISO(), amount, method: "Банковский перевод" })
-          }
-        />
-      )}
+      {previewDoc &&
+        (() => {
+          const docContract = state.contracts.find((x) => x.id === previewDoc.contractId);
+          return (
+            <DocumentPreview
+              doc={previewDoc}
+              party={state.parties.find((p) => p.id === previewDoc.counterpartyId)}
+              own={state.own}
+              contract={docContract}
+              payments={state.payments.filter((p) => p.docId === previewDoc.id)}
+              onClose={() => setPreviewId(null)}
+              onStatus={setStatus}
+              onEdit={(d) => {
+                setPreviewId(null);
+                setEditing(d);
+              }}
+              onQuickPay={(amount) =>
+                addPayment({
+                  id: uid(),
+                  docId: previewDoc.id,
+                  date: todayISO(),
+                  amount,
+                  method: "Банковский перевод",
+                  name: suggestPaymentName(previewDoc, docContract),
+                })
+              }
+              onAddPayment={addPayment}
+              onUpdatePayment={updatePayment}
+              onDeletePayment={deletePayment}
+            />
+          );
+        })()}
 
       {editing !== null && (
         <DocumentForm
@@ -833,11 +848,15 @@ export default function App() {
       {partialFor && (
         <PaymentForm
           title={`Частичная оплата · № ${partialFor.number}`}
-          defaultAmount={Math.max(
-            partialFor.items.reduce((s, it) => s + it.qty * it.price, 0) -
-              state.payments.filter((p) => p.docId === partialFor.id).reduce((s, p) => s + p.amount, 0),
-            0
-          )}
+          docs={[
+            {
+              id: partialFor.id,
+              label: `№ ${partialFor.number} · ${fmtMoney(partialFor.items.reduce((s, it) => s + it.qty * it.price, 0))}`,
+              total: partialFor.items.reduce((s, it) => s + it.qty * it.price, 0),
+              paid: state.payments.filter((p) => p.docId === partialFor.id).reduce((s, p) => s + p.amount, 0),
+              suggestedName: suggestPaymentName(partialFor, state.contracts.find((c) => c.id === partialFor.contractId)),
+            },
+          ]}
           info={
             <>
               Введите полученную сумму — счёт получит статус{" "}
