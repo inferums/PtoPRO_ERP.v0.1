@@ -52,19 +52,18 @@ function Form({ parties, onSave, onClose }: { parties: Party[]; onSave: (l: Lett
             <textarea value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} rows={5} className={`${inp} resize-none`} />
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-2.5">
-          <button onClick={onClose} className="cursor-pointer border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut hover:text-ink">
+        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
+          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
             отмена
           </button>
           <button
             onClick={() => f.subject.trim() && onSave(f)}
-            className="cursor-pointer bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
           >
             сохранить
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
