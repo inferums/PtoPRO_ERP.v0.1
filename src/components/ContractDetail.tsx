@@ -19,6 +19,7 @@ import {
   type Payment,
 } from "../lib/store";
 import { ContractForm } from "./Contracts";
+import PaymentForm from "./PaymentForm";
 import { IconArrow, IconCoin, IconDownload, IconLetter, IconPencil, IconPlus, IconPrint, IconTrash } from "./icons";
 
 function Badge({ chip, label }: { chip: string; label: string }) {
@@ -49,39 +50,6 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function AddPayment({ onAdd, onClose }: { onAdd: (p: Payment) => void; onClose: () => void }) {
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const [method, setMethod] = useState("Банковский перевод");
-  const inp =
-    "w-full rounded-md border border-line bg-white px-3 py-2 text-[13px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand";
-  return (
-    <div className="modal-in rounded-lg border border-brand/40 bg-[#f4f8fe] p-3">
-      <div className="grid gap-2 sm:grid-cols-[1fr_150px_1fr_auto]">
-        <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Сумма, ₽" type="number" min={0} className={inp} />
-        <input value={date} onChange={(e) => setDate(e.target.value)} type="date" className={inp} />
-        <select value={method} onChange={(e) => setMethod(e.target.value)} className={inp}>
-          {["Банковский перевод", "Наличные", "Карта"].map((m) => (
-            <option key={m}>{m}</option>
-          ))}
-        </select>
-        <button
-          onClick={() => {
-            const a = Number(amount);
-            if (a > 0) onAdd({ id: uid(), docId: "", date, amount: a, method });
-          }}
-          className="cursor-pointer rounded-md bg-paid px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#268257]"
-        >
-          записать
-        </button>
-      </div>
-      <button onClick={onClose} className="mt-2 cursor-pointer font-mono text-[10.5px] uppercase tracking-[0.1em] text-mut hover:text-ink">
-        отмена
-      </button>
-    </div>
-  );
-}
-
 type Tab = "card" | "invoices" | "acts" | "payments" | "letters";
 
 export default function ContractDetail({
@@ -100,6 +68,8 @@ export default function ContractDetail({
   onDelete,
   onOpenDoc,
   onAddPayment,
+  onUpdatePayment,
+  onDeletePayment,
 }: {
   contract: Contract;
   party: Party | undefined;
@@ -116,12 +86,21 @@ export default function ContractDetail({
   onDelete: (id: string) => void;
   onOpenDoc: (id: string) => void;
   onAddPayment: (p: Payment) => void;
+  onUpdatePayment: (p: Payment) => void;
+  onDeletePayment: (id: string) => void;
 }) {
   const [tab, setTab] = useState<Tab>("card");
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [addingPayment, setAddingPayment] = useState(false);
+  const [payForm, setPayForm] = useState<null | { mode: "add" } | { mode: "edit"; pay: Payment }>(null);
+  const [confirmPay, setConfirmPay] = useState<string | null>(null);
   const [openLetter, setOpenLetter] = useState<string | null>(null);
+
+  const paidByDoc = useMemo(() => {
+    const m = new Map<string, number>();
+    payments.forEach((p) => m.set(p.docId, (m.get(p.docId) ?? 0) + p.amount));
+    return m;
+  }, [payments]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onBack();
@@ -337,43 +316,92 @@ export default function ContractDetail({
       {tab === "payments" && (
         <div className="fade-up space-y-2">
           <div className="flex justify-end">
-            {!addingPayment && (
-              <button
-                onClick={() => setAddingPayment(true)}
-                className="flex cursor-pointer items-center gap-1.5 rounded-md bg-paid px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#268257]"
-              >
-                <IconPlus size={13} /> оплата
-              </button>
-            )}
+            <button
+              onClick={() => setPayForm({ mode: "add" })}
+              disabled={docs.length === 0}
+              className="flex cursor-pointer items-center gap-1.5 rounded-md bg-paid px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#268257] disabled:cursor-not-allowed disabled:opacity-50"
+              title={docs.length === 0 ? "Сначала создайте счёт или акт по договору" : ""}
+            >
+              <IconPlus size={13} /> оплата
+            </button>
           </div>
-          {addingPayment && (
-            <AddPayment
-              onAdd={(p) => {
-                const firstDoc = invoices[0] ?? acts[0];
-                onAddPayment({ ...p, docId: firstDoc?.id ?? p.docId });
-                setAddingPayment(false);
+          {payments.length === 0 && (
+            <p className="rounded-xl border border-dashed border-line2 bg-surface p-8 text-center text-[13px] text-mut">
+              Оплат по договору пока нет{docs.length > 0 ? " — добавьте первую" : ""}
+            </p>
+          )}
+          {payments.map((p) => {
+            const pDoc = docs.find((d) => d.id === p.docId);
+            return (
+              <div key={p.id} className="group flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3 transition-colors hover:border-line2">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[#e1f3e9] text-paid">
+                  <IconCoin size={17} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-semibold text-ink">
+                    {p.method}
+                    {pDoc ? <span className="ml-2 font-mono text-[10.5px] font-normal text-brand">№ {pDoc.number}</span> : null}
+                  </span>
+                  <span className="font-mono text-[10.5px] text-dim">
+                    {fmtDate(p.date)}
+                    {p.comment ? ` · ${p.comment}` : ""}
+                  </span>
+                </span>
+                <span className="font-mono text-[13.5px] font-bold text-[#2E7D32]">{fmtMoney(p.amount)}</span>
+                <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  <button
+                    onClick={() => setPayForm({ mode: "edit", pay: p })}
+                    className="cursor-pointer rounded-md p-1.5 text-mut transition-colors hover:bg-soft hover:text-ink"
+                    title="Редактировать"
+                  >
+                    <IconPencil size={14} />
+                  </button>
+                  {confirmPay === p.id ? (
+                    <button
+                      onClick={() => {
+                        onDeletePayment(p.id);
+                        setConfirmPay(null);
+                      }}
+                      className="cursor-pointer rounded-md bg-danger px-2 py-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.06em] text-white transition-colors hover:bg-[#c74444]"
+                    >
+                      удалить
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmPay(p.id)}
+                      className="cursor-pointer rounded-md p-1.5 text-mut transition-colors hover:bg-[#fbe7e5] hover:text-danger"
+                      title="Удалить"
+                    >
+                      <IconTrash size={14} />
+                    </button>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+
+          {payForm && (
+            <PaymentForm
+              title={payForm.mode === "add" ? "Новая оплата" : "Редактирование оплаты"}
+              docs={
+                payForm.mode === "add"
+                  ? docs.map((d) => ({
+                      id: d.id,
+                      label: `${TYPE_META[d.type].label} № ${d.number} · ${fmtMoney(calc(d).total)}`,
+                      total: calc(d).total,
+                      paid: paidByDoc.get(d.id) ?? 0,
+                    }))
+                  : undefined
+              }
+              initial={payForm.mode === "edit" ? payForm.pay : null}
+              onSave={(p) => {
+                if (payForm.mode === "add") onAddPayment({ ...p, docId: p.docId || docs[0]?.id || "" });
+                else onUpdatePayment(p);
+                setPayForm(null);
               }}
-              onClose={() => setAddingPayment(false)}
+              onClose={() => setPayForm(null)}
             />
           )}
-          {payments.length === 0 && !addingPayment && (
-            <p className="rounded-xl border border-dashed border-line2 bg-surface p-8 text-center text-[13px] text-mut">Оплат по договору пока нет</p>
-          )}
-          {payments.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[#e1f3e9] text-paid">
-                <IconCoin size={17} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold text-ink">{p.method}</span>
-                <span className="font-mono text-[10.5px] text-dim">
-                  {fmtDate(p.date)}
-                  {p.comment ? ` · ${p.comment}` : ""}
-                </span>
-              </span>
-              <span className="font-mono text-[13.5px] font-bold text-[#2E7D32]">{fmtMoney(p.amount)}</span>
-            </div>
-          ))}
         </div>
       )}
 

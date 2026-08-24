@@ -30,6 +30,7 @@ import DocumentPreview from "./components/DocumentPreview";
 import Contracts from "./components/Contracts";
 import ContractDetail from "./components/ContractDetail";
 import Finance from "./components/Finance";
+import PaymentForm from "./components/PaymentForm";
 import Letters from "./components/Letters";
 import Counterparties from "./components/Counterparties";
 import {
@@ -260,6 +261,7 @@ export default function App() {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [contractId, setContractId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Doc | null | "new">(null);
+  const [partialFor, setPartialFor] = useState<Doc | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
   const [mobileMode, setMobileMode] = useState<boolean>(() => {
@@ -323,10 +325,47 @@ export default function App() {
 
   const setStatus = (id: string, s: DocStatus) => {
     const doc = state.docs.find((d) => d.id === id);
-    setState((st) => ({ ...st, docs: st.docs.map((d) => (d.id === id ? { ...d, status: s } : d)) }));
-    if (doc) {
-      toast(s === "paid" ? `№ ${doc.number} оплачен — печать поставлена` : `№ ${doc.number}: «${STATUS_META[s].label}»`);
+    if (!doc) return;
+
+    /* «Оплачен»: автоматически создаём платёж на недоплаченную сумму счёта */
+    if (s === "paid") {
+      const total = doc.items.reduce((sm, it) => sm + it.qty * it.price, 0);
+      const paidSum = state.payments.filter((p) => p.docId === id).reduce((sm, p) => sm + p.amount, 0);
+      const rest = Math.max(total - paidSum, 0);
+      setState((st) => ({
+        ...st,
+        payments:
+          rest > 0
+            ? [
+                ...st.payments,
+                {
+                  id: uid(),
+                  docId: id,
+                  date: todayISO(),
+                  amount: rest,
+                  method: "Банковский перевод",
+                  comment: "автоматически по статусу «Оплачен»",
+                },
+              ]
+            : st.payments,
+        docs: st.docs.map((d) => (d.id === id ? { ...d, status: s } : d)),
+      }));
+      toast(
+        rest > 0
+          ? `№ ${doc.number} оплачен — платёж на ${rest.toLocaleString("ru-RU")} ₽ создан автоматически`
+          : `№ ${doc.number}: «Оплачен»`
+      );
+      return;
     }
+
+    /* «Частично оплачен»: сначала запрашиваем сумму платежа */
+    if (s === "paid_partial") {
+      setPartialFor(doc);
+      return;
+    }
+
+    setState((st) => ({ ...st, docs: st.docs.map((d) => (d.id === id ? { ...d, status: s } : d)) }));
+    toast(`№ ${doc.number}: «${STATUS_META[s].label}»`);
   };
 
   const saveDoc = (doc: Doc) => {
@@ -386,14 +425,38 @@ export default function App() {
       const doc = st.docs.find((d) => d.id === p.docId);
       const docTotal = doc ? doc.items.reduce((s, it) => s + it.qty * it.price, 0) : Infinity;
       const alreadyPaid = st.payments.filter((x) => x.docId === p.docId).reduce((s, x) => s + x.amount, 0);
-      const willBePaid = alreadyPaid + p.amount >= docTotal;
-      return {
-        ...st,
-        payments: [...st.payments, p],
-        docs: willBePaid ? st.docs.map((d) => (d.id === p.docId ? { ...d, status: "paid" as DocStatus } : d)) : st.docs,
-      };
+      const newSum = alreadyPaid + p.amount;
+      /* статус следует за деньгами: покрыто всё — «Оплачен», часть — «Частично оплачен» */
+      const docs = doc
+        ? st.docs.map((d) =>
+            d.id === p.docId
+              ? {
+                  ...d,
+                  status: (newSum >= docTotal ? "paid" : newSum > 0 && d.status !== "paid" ? "paid_partial" : d.status) as DocStatus,
+                }
+              : d
+          )
+        : st.docs;
+      return { ...st, payments: [...st.payments, p], docs };
     });
     toast(`Оплата ${p.amount.toLocaleString("ru-RU")} ₽ записана`);
+  };
+
+  const updatePayment = (p: Payment) => {
+    setState((st) => ({ ...st, payments: st.payments.map((x) => (x.id === p.id ? p : x)) }));
+    toast("Оплата обновлена");
+  };
+
+  const deletePayment = (id: string) => {
+    setState((st) => ({ ...st, payments: st.payments.filter((x) => x.id !== id) }));
+    toast("Оплата удалена");
+  };
+
+  /* подтверждение частичной оплаты из модального окна */
+  const confirmPartial = (p: Payment) => {
+    if (!partialFor) return;
+    addPayment({ ...p, docId: partialFor.id });
+    setPartialFor(null);
   };
 
   const addLetter = (l: Letter) => {
@@ -657,6 +720,8 @@ export default function App() {
                 }}
                 onOpenDoc={(id) => setPreviewId(id)}
                 onAddPayment={addPayment}
+                onUpdatePayment={updatePayment}
+                onDeletePayment={deletePayment}
               />
             ) : (
               <>
@@ -699,6 +764,8 @@ export default function App() {
                 payments={state.payments}
                 parties={state.parties}
                 onAddPayment={addPayment}
+                onUpdatePayment={updatePayment}
+                onDeletePayment={deletePayment}
                 onOpenContract={(id) => setContractId(id)}
               />
             )}
@@ -759,6 +826,27 @@ export default function App() {
           forcedType={view === "acts" ? "act" : view === "invoices" ? "invoice" : undefined}
           onSave={saveDoc}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {/* запрос суммы частичной оплаты */}
+      {partialFor && (
+        <PaymentForm
+          title={`Частичная оплата · № ${partialFor.number}`}
+          defaultAmount={Math.max(
+            partialFor.items.reduce((s, it) => s + it.qty * it.price, 0) -
+              state.payments.filter((p) => p.docId === partialFor.id).reduce((s, p) => s + p.amount, 0),
+            0
+          )}
+          info={
+            <>
+              Введите полученную сумму — счёт получит статус{" "}
+              <b className="text-[#00796b]">«Частично оплачен»</b>. Когда оплаты покроют счёт целиком, статус
+              автоматически станет <b className="text-paid">«Оплачен»</b>.
+            </>
+          }
+          onSave={confirmPartial}
+          onClose={() => setPartialFor(null)}
         />
       )}
 

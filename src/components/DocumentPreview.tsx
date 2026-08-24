@@ -84,6 +84,15 @@ export default function DocumentPreview({
                 {meta.nextLabel} <IconArrow size={12} />
               </button>
             )}
+            {meta.altNext && (
+              <button
+                onClick={() => onStatus(doc.id, meta.altNext!)}
+                className="flex cursor-pointer items-center gap-2 border border-[#26a69a] px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-[#00796b] transition-all hover:bg-[#e0f2f1]"
+                title="Записать частичную оплату"
+              >
+                {meta.altLabel}
+              </button>
+            )}
             <button onClick={() => onEdit(doc)} className="flex cursor-pointer items-center gap-2 border border-white/20 px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-white/80 transition-colors hover:border-white/50 hover:text-white">
               <IconPencil size={13} /> изменить
             </button>
@@ -184,6 +193,19 @@ export default function DocumentPreview({
             <p className="mt-1 flex justify-between border-t-2 border-ink pt-2.5 text-[15px] font-bold">
               <span>ВСЕГО К ОПЛАТЕ:</span><span className="font-mono">{fmtMoney(total)}</span>
             </p>
+            {paid > 0 && (
+              <p className="mt-2 flex items-baseline justify-between text-[13px]">
+                <span className="text-mut">Оплачено:</span>
+                <span className={`font-mono font-semibold ${rest === 0 ? "text-paid" : "text-[#00796b]"}`}>
+                  {fmtMoney(paid)} из {fmtMoney(total)}
+                </span>
+              </p>
+            )}
+            {rest > 0 && paid > 0 && (
+              <div className="mt-1.5 h-1 w-full bg-bg">
+                <div className="h-full bg-[#26a69a] transition-all duration-700" style={{ width: `${Math.min((paid / total) * 100, 100)}%` }} />
+              </div>
+            )}
           </div>
 
           <p className="mt-6 text-[12.5px] italic text-mut">{amountInWords(total)}</p>

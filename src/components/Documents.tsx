@@ -161,6 +161,18 @@ export default function Documents({
                           {meta.nextLabel} <IconArrow size={11} />
                         </button>
                       )}
+                      {meta.altNext && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatus(d.id, meta.altNext!);
+                          }}
+                          className="cursor-pointer border border-[#26a69a]/60 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-[#00796b] transition-all hover:bg-[#e0f2f1]"
+                          title="Записать частичную оплату"
+                        >
+                          {meta.altLabel}
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

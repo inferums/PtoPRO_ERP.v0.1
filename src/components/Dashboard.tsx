@@ -65,7 +65,7 @@ export default function Dashboard({
   const sum = (list: Doc[]) => list.reduce((s, x) => s + calc(x).total, 0);
   const billedMonth = sum(docs.filter((x) => x.date.startsWith(curPrefix)));
   const paidTotal = sum(docs.filter((x) => x.status === "paid"));
-  const awaiting = sum(docs.filter((x) => x.status === "sent" || x.status === "signed"));
+  const awaiting = sum(docs.filter((x) => x.status === "sent" || x.status === "signed" || x.status === "paid_partial"));
   const drafts = docs.filter((x) => x.status === "draft").length;
 
   const vBilled = useCountUp(billedMonth);
