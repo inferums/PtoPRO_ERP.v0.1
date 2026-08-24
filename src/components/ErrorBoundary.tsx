@@ -28,7 +28,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children;
     return (
       <div className="grid min-h-screen place-items-center bg-[#edf1f7] p-6">
-        <div className="w-full max-w-md border border-[#e05555]/40 bg-white p-8 text-center shadow-[0_30px_70px_-30px_rgba(14,36,60,0.4)]">
+        <div className="w-full max-w-md rounded-xl border border-[#e05555]/40 bg-white p-8 text-center shadow-[0_30px_70px_-30px_rgba(14,36,60,0.4)]">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border-2 border-[#e05555]/50 bg-[#fbe7e5]">
             <svg width="22" height="20" viewBox="0 0 22 20" fill="none" aria-hidden="true">
               <path d="M11 1.5 21 18.5H1z" stroke="#e05555" strokeWidth="1.8" />

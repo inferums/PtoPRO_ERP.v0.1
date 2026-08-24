@@ -97,12 +97,12 @@ function SettingsView({
   const importRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof Own) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
   const inp =
-    "w-full border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand";
+    "w-full rounded-md border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand focus:ring-[3px] focus:ring-brand/15";
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
     <div className="fade-up grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-      <div className="border border-line bg-surface p-6 md:p-7">
+      <div className="rounded-xl border border-line bg-surface p-6 shadow-sm md:p-7">
         <h3 className="font-display text-[15px] font-bold text-ink">Реквизиты поставщика</h3>
         <p className="mt-1 text-[12.5px] text-mut">Эти данные попадают в шапку и колонтитул каждого счёта, акта и договора</p>
 
@@ -166,7 +166,7 @@ function SettingsView({
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="border border-line bg-surface p-6">
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
           <h3 className="font-display text-[14px] font-bold text-ink">Где живут данные</h3>
           <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
             Всё хранится <span className="font-semibold text-ink">локально в браузере</span> (localStorage) и
@@ -211,7 +211,7 @@ function SettingsView({
           </div>
         </div>
 
-        <div className="border border-line bg-surface p-6">
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
           <h3 className="font-display text-[14px] font-bold text-ink">PWA-установка</h3>
           <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
             В Chrome и Edge кнопка «Установить» появится в адресной строке, на Android — системный диалог.
@@ -219,7 +219,7 @@ function SettingsView({
           </p>
         </div>
 
-        <div className="border border-danger/30 bg-surface p-6">
+        <div className="rounded-xl border border-danger/30 bg-surface p-6 shadow-sm">
           <h3 className="font-display text-[14px] font-bold text-danger">Сброс</h3>
           <p className="mt-2 text-[12.5px] leading-relaxed text-mut">Вернуть демо-данные, удалив все свои изменения.</p>
           {confirmReset ? (
@@ -524,7 +524,7 @@ export default function App() {
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`toast-in border-l-[3px] bg-navy px-4 py-3 font-mono text-[12px] text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
+              className={`toast-in rounded-lg border-l-[3px] bg-navy px-4 py-3 text-[12px] font-medium text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
                 t.tone === "ok" ? "border-paid" : "border-danger"
               }`}
             >
@@ -665,7 +665,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setEditing("new")}
-              className="flex cursor-pointer items-center gap-1.5 bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
+              className="flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white"
             >
               <IconPlus size={12} /> документ
             </button>
@@ -694,7 +694,7 @@ export default function App() {
               )}
               <button
                 onClick={() => setEditing("new")}
-                className="flex cursor-pointer items-center gap-2 bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-all hover:bg-brand2 hover:shadow-[0_8px_24px_-8px_rgba(30,136,229,0.6)]"
+                className="flex cursor-pointer items-center gap-2 rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-all hover:bg-brand2 hover:shadow-[0_8px_24px_-8px_rgba(30,136,229,0.6)]"
               >
                 <IconPlus size={13} /> новый документ
               </button>
@@ -874,7 +874,7 @@ export default function App() {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`toast-in border-l-[3px] bg-navy px-4 py-3 font-mono text-[12px] text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
+            className={`toast-in rounded-lg border-l-[3px] bg-navy px-4 py-3 text-[12px] font-medium text-white shadow-[0_18px_40px_-12px_rgba(14,36,60,0.5)] ${
               t.tone === "ok" ? "border-paid" : "border-danger"
             }`}
           >

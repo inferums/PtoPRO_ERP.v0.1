@@ -47,8 +47,8 @@ export function ContractForm({
     }
   );
   const inp =
-    "w-full border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand";
-  const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
+    "w-full rounded-md border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand focus:ring-[3px] focus:ring-brand/15";
+  const lbl = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.1em] text-mut";
 
   return (
     <Modal
@@ -226,7 +226,7 @@ export default function Contracts({
         </select>
         <button
           onClick={() => setEditing("new")}
-          className="flex h-9 cursor-pointer items-center gap-1.5 bg-brand px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.06em] text-white transition-colors hover:bg-brand2"
+          className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-brand px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.06em] text-white transition-colors hover:bg-brand2"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M5 12h14" /><path d="M12 5v14" />
@@ -236,7 +236,7 @@ export default function Contracts({
       </div>
 
       {/* таблица */}
-      <div className="mt-4 overflow-x-auto border border-line bg-surface shadow-sm">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
         <table className="w-full min-w-[980px] border-collapse text-left">
           <thead>
             <tr className="border-b border-line bg-soft">

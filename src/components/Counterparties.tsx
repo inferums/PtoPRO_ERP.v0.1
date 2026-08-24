@@ -75,7 +75,7 @@ export default function Counterparties({
         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-dim">в базе: {parties.length}</p>
         <button
           onClick={() => setEditing("new")}
-          className="flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+          className="flex cursor-pointer items-center gap-2 rounded-md bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
         >
           <IconPlus size={13} /> контрагент
         </button>
@@ -85,7 +85,7 @@ export default function Counterparties({
         {parties.map((p, i) => (
           <div
             key={p.id}
-            className="fade-up group border border-line bg-surface p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-line2 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.3)]"
+            className="fade-up group rounded-xl border border-line bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-line2 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.3)]"
             style={{ animationDelay: `${i * 60}ms` }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -109,7 +109,7 @@ export default function Counterparties({
             </div>
 
             {confirmId === p.id && (
-              <div className="pop-in mt-3 border border-danger/40 bg-[#fbe7e5] p-3" style={{ animation: "toastIn 0.3s both" }}>
+              <div className="pop-in mt-3 rounded-lg border border-danger/40 bg-[#fbe7e5] p-3" style={{ animation: "toastIn 0.3s both" }}>
                 <p className="text-[12px] text-[#b03a30]">Удалить «{p.name}» из базы?</p>
                 <div className="mt-2 flex gap-2">
                   <button
@@ -132,7 +132,7 @@ export default function Counterparties({
       </div>
 
       {parties.length === 0 && (
-        <div className="mt-4 border border-dashed border-line2 bg-surface p-12 text-center">
+        <div className="mt-4 rounded-xl border border-dashed border-line2 bg-surface p-12 text-center">
           <IconPeople size={36} className="mx-auto text-dim" />
           <p className="mt-4 font-display text-[15px] font-bold text-ink">База контрагентов пуста</p>
           <p className="mt-2 text-[13px] text-mut">Добавьте первого покупателя или заказчика</p>

@@ -82,7 +82,7 @@ export default function Letters({ letters, parties, onAdd }: { letters: Letter[]
         <button
           onClick={() => setAdding(true)}
           disabled={parties.length === 0}
-          className="flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex cursor-pointer items-center gap-2 rounded-md bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2 disabled:cursor-not-allowed disabled:opacity-50"
           title={parties.length === 0 ? "Сначала добавьте контрагента" : ""}
         >
           <IconPlus size={13} /> письмо
@@ -94,7 +94,7 @@ export default function Letters({ letters, parties, onAdd }: { letters: Letter[]
           const open = openId === l.id;
           const isIn = l.direction === "in";
           return (
-            <div key={l.id} className="fade-up border border-line bg-surface transition-all duration-300 hover:border-line2" style={{ animationDelay: `${i * 50}ms` }}>
+            <div key={l.id} className="fade-up overflow-hidden rounded-xl border border-line bg-surface shadow-sm transition-all duration-300 hover:border-line2 hover:shadow-[0_12px_28px_-16px_rgba(14,36,60,0.3)]" style={{ animationDelay: `${i * 50}ms` }}>
               <button onClick={() => setOpenId(open ? null : l.id)} className="flex w-full cursor-pointer items-center gap-4 px-5 py-4 text-left">
                 <span
                   className={`grid h-9 w-16 shrink-0 place-items-center border font-mono text-[10px] font-semibold uppercase tracking-[0.06em] ${
@@ -121,7 +121,7 @@ export default function Letters({ letters, parties, onAdd }: { letters: Letter[]
       </div>
 
       {sorted.length === 0 && (
-        <div className="mt-4 border border-dashed border-line2 bg-surface p-12 text-center">
+        <div className="mt-4 rounded-xl border border-dashed border-line2 bg-surface p-12 text-center">
           <IconLetter size={36} className="mx-auto text-dim" />
           <p className="mt-4 font-display text-[15px] font-bold text-ink">Переписки пока нет</p>
           <p className="mt-2 text-[13px] text-mut">Входящие и исходящие письма по контрагентам — здесь</p>

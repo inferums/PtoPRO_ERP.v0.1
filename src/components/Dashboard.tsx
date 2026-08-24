@@ -35,12 +35,12 @@ function useCountUp(target: number) {
 function StatTile({ label, value, sub, dark }: { label: string; value: string; sub: string; dark?: boolean }) {
   return (
     <div
-      className={`group border p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.35)] ${
+      className={`group rounded-xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.35)] ${
         dark ? "border-navy bg-navy text-white" : "border-line bg-surface"
       }`}
     >
-      <p className={`font-mono text-[10.5px] uppercase tracking-[0.16em] ${dark ? "text-white/55" : "text-dim"}`}>{label}</p>
-      <p className={`mt-3 font-display text-[24px] font-extrabold leading-none tracking-tight ${dark ? "text-white" : "text-ink"}`}>{value}</p>
+      <p className={`text-[11px] font-semibold uppercase tracking-[0.1em] ${dark ? "text-white/55" : "text-mut"}`}>{label}</p>
+      <p className={`mt-3 font-display text-[24px] font-extrabold leading-none tracking-tight ${dark ? "text-white" : "text-[#1a237e]"}`}>{value}</p>
       <p className={`mt-2.5 text-[12px] ${dark ? "text-[#8cc3f2]" : "text-mut"}`}>{sub}</p>
     </div>
   );
@@ -96,10 +96,10 @@ export default function Dashboard({
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-        <div className="border border-line bg-surface p-6">
+        <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
           <div className="flex items-baseline justify-between gap-4">
-            <h3 className="font-display text-[15px] font-bold text-ink">Выручка по месяцам</h3>
-            <span className="font-mono text-[11px] text-dim">последние 6 мес · ₽</span>
+            <h3 className="font-display text-[15px] font-bold text-[#1a237e]">Выручка по месяцам</h3>
+            <span className="text-[11px] font-medium text-dim">последние 6 мес · ₽</span>
           </div>
           <div className="mt-6 flex h-44 items-end gap-3 sm:gap-4">
             {months.map((m, i) => (
@@ -117,9 +117,9 @@ export default function Dashboard({
           </div>
         </div>
 
-        <div className="flex flex-col border border-line bg-surface">
+        <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
           <div className="flex items-center justify-between border-b border-line px-5 py-4">
-            <h3 className="font-display text-[15px] font-bold text-ink">Последние документы</h3>
+            <h3 className="font-display text-[15px] font-bold text-[#1a237e]">Последние документы</h3>
             <button onClick={onGoDocs} className="group flex cursor-pointer items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-brand transition-colors hover:text-brand2">
               все <IconArrow size={13} className="transition-transform duration-300 group-hover:translate-x-0.5" />
             </button>
@@ -128,7 +128,7 @@ export default function Dashboard({
             {recent.length === 0 && (
               <div className="p-8 text-center">
                 <p className="text-[13.5px] text-mut">Документов пока нет</p>
-                <button onClick={onNew} className="mt-4 inline-flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2">
+                <button onClick={onNew} className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-md bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2">
                   <IconPlus size={13} /> создать первый
                 </button>
               </div>
