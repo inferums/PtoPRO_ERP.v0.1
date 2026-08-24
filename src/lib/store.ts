@@ -114,18 +114,18 @@ const d = (monthsAgo: number) => {
 };
 
 export const DEFAULT_OWN: Own = {
-  name: "Индивидуальный предприниматель Иванов Иван Иванович",
-  short: "ИП Иванов И. И.",
-  inn: "771234567890",
-  address: "г. Москва, ул. Складочная, д. 1, стр. 5",
-  phone: "+7 (495) 123-45-67",
-  email: "ivanov@ptopro.ru",
-  website: "ptopro.space-z.ai",
-  bank: "АО «АЛЬФА-БАНК» г. Москва",
-  corrAccount: "30101810200000000593",
-  bik: "044525593",
-  account: "40802810500000012345",
-  director: "Иванов И. И.",
+  name: "Индивидуальный предприниматель Яшина Ксения Александровна",
+  short: "ИП Яшина К. А.",
+  inn: "025602481039",
+  address: "195298, г. Санкт-Петербург, пр-кт. Наставников, д.15, к.3, литера А, кв.140",
+  phone: "8 (981) 149-09-69",
+  email: "info@ptopro.ru",
+  website: "www.ptopro.ru",
+  bank: "ООО «ОЗОН Банк»",
+  corrAccount: "30101810645374525068",
+  bik: "044525068",
+  account: "40802810500002291325",
+  director: "Яшина К. А.",
 };
 
 export function seedState(): State {

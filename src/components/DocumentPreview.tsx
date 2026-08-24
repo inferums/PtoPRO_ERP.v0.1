@@ -75,7 +75,7 @@ export default function DocumentPreview({
 
   const downloadWord = async () => {
     const { downloadDocx } = await import("../lib/docx");
-    await downloadDocx(doc, party, own);
+    await downloadDocx(doc, party, own, contract?.number);
   };
 
   const docOption = {
@@ -140,51 +140,92 @@ export default function DocumentPreview({
           <div id="print-sheet" className="relative h-fit w-full bg-white px-8 py-9 text-ink shadow-[0_24px_60px_-24px_rgba(28,36,50,0.45)] sm:px-11 sm:py-10">
             {doc.status === "paid" && <Stamp date={doc.date} short={own.short} />}
 
-            <div className="grid grid-cols-[1.25fr_1fr] border border-ink/80 text-[11.5px] leading-relaxed">
-              <div className="border-r border-ink/80 p-3">
-                <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-dim">Поставщик</span>
-                <p className="mt-1 font-semibold">{displayName(own.name)}</p>
-                <p className="mt-0.5">ИНН {own.inn ?? "—"}</p>
-                {own.address && <p>{own.address}</p>}
-              </div>
-              <div className="flex flex-col">
-                <div className="flex-1 border-b border-ink/80 p-3">{own.bank}</div>
-                <div className="grid grid-cols-2">
-                  <div className="border-r border-ink/80 p-3">
-                    <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-dim">БИК</span>
-                    <p className="mt-0.5 font-mono">{own.bik}</p>
-                  </div>
-                  <div className="p-3">
-                    <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-dim">Счёт</span>
-                    <p className="mt-0.5 font-mono">{own.account}</p>
-                  </div>
+            {/* фирменная шапка: логотип + контакты */}
+            <div className="flex items-start justify-between gap-4 border-b-2 border-brand pb-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand font-display text-[16px] font-extrabold text-white">П</span>
+                <div>
+                  <p className="font-display text-[15px] font-extrabold leading-tight text-ink">PtoPRO</p>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-dim">документооборот</p>
                 </div>
               </div>
+              <div className="text-right text-[10.5px] leading-relaxed text-mut">
+                {own.address && <p>{own.address}</p>}
+                <p className="mt-0.5">
+                  {own.phone ? `тел.: ${own.phone}` : ""}
+                  {own.email ? ` · e-mail: ${own.email}` : ""}
+                </p>
+                {own.website && <p>{own.website}</p>}
+              </div>
             </div>
 
-            <h2 className="mt-8 font-display text-[22px] font-extrabold tracking-[0.04em]">
-              {TYPE_META[doc.type]?.title ?? "Документ"} № {doc.number}
+            {/* банковские реквизиты */}
+            <table className="mt-4 w-full border-collapse text-[10.5px] leading-snug">
+              <tbody>
+                <tr>
+                  <td className="border border-ink/70 px-2 py-1.5 align-top" rowSpan={2}>
+                    <p className="font-semibold">{own.bank}</p>
+                    <p className="text-dim">Банк получателя</p>
+                  </td>
+                  <td className="border border-ink/70 px-2 py-1.5 text-dim">БИК</td>
+                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{own.bik}</td>
+                </tr>
+                <tr>
+                  <td className="border border-ink/70 px-2 py-1.5 text-dim">Сч. №</td>
+                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{own.corrAccount ?? ""}</td>
+                </tr>
+                <tr>
+                  <td className="border border-ink/70 px-2 py-1.5">
+                    ИНН {own.inn ?? "—"}
+                  </td>
+                  <td className="border border-ink/70 px-2 py-1.5 text-dim">Сч. №</td>
+                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{own.account}</td>
+                </tr>
+                <tr>
+                  <td className="border border-ink/70 px-2 py-1.5 font-semibold" colSpan={3}>{displayName(own.name)}</td>
+                </tr>
+                <tr>
+                  <td className="border border-ink/70 px-2 py-1 text-dim" colSpan={3}>Получатель</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* заголовок */}
+            <h2 className="mt-6 text-center text-[17px] font-bold text-ink">
+              {TYPE_META[doc.type]?.title ?? "Документ"} № {doc.number} от {fmtDate(doc.date)} г.
             </h2>
-            <p className="mt-1 text-[13px] text-mut">от {fmtDate(doc.date)}</p>
-            {contract && (
-              <p className="mt-1 text-[12px] text-mut">
-                Основание: договор № {contract.number} — {contract.subject}
-              </p>
-            )}
 
-            <div className="mt-6 text-[12.5px] leading-relaxed">
-              <p>
-                <span className="font-semibold">Покупатель:</span> {party?.name ?? "— не указан —"}
-                {party?.inn ? `, ИНН ${party.inn}` : ""}
-              </p>
-              {party?.person && <p className="text-mut">Контактное лицо: {party.person}</p>}
-            </div>
+            {/* поставщик / покупатель / основание */}
+            <table className="mt-4 w-full border-collapse text-[11.5px] leading-relaxed">
+              <tbody>
+                <tr>
+                  <td className="border border-ink/60 px-2 py-1.5 align-top font-semibold text-dim">Поставщик:</td>
+                  <td className="border border-ink/60 px-2 py-1.5">
+                    {displayName(own.name)}, ИНН {own.inn ?? "—"}{own.address ? `, ${own.address}` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border border-ink/60 px-2 py-1.5 align-top font-semibold text-dim">Покупатель:</td>
+                  <td className="border border-ink/60 px-2 py-1.5">
+                    {party?.name ?? ""}
+                    {party?.inn ? `, ИНН ${party.inn}` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="border border-ink/60 px-2 py-1.5 align-top font-semibold text-dim">Основание:</td>
+                  <td className="border border-ink/60 px-2 py-1.5">
+                    {contract ? `договор № ${contract.number} от ${fmtDate(doc.date)} г.` : "—"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-            <table className="mt-7 w-full border-collapse text-[12px]">
+            {/* позиции с колонкой НДС */}
+            <table className="mt-4 w-full border-collapse text-[11.5px]">
               <thead>
                 <tr className="bg-soft">
-                  {["№", "Наименование", "Кол-во", "Ед.", "Цена", "Сумма"].map((h, i) => (
-                    <th key={h} className={`border border-line2 px-2.5 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-mut ${i === 1 ? "text-left" : "text-center"} ${i >= 4 ? "text-right" : ""}`}>
+                  {["№", "Товары (работы, услуги)", "Кол-во", "Ед.", "НДС", "Цена", "Сумма"].map((h, i) => (
+                    <th key={h} className={`border border-ink/60 px-2 py-2 font-mono text-[9.5px] font-semibold uppercase tracking-[0.06em] text-mut ${i === 1 ? "text-left" : "text-center"}`}>
                       {h}
                     </th>
                   ))}
@@ -193,25 +234,27 @@ export default function DocumentPreview({
               <tbody>
                 {doc.items.map((it, i) => (
                   <tr key={it.id}>
-                    <td className="border border-line2 px-2.5 py-2 text-center font-mono text-mut">{i + 1}</td>
-                    <td className="border border-line2 px-2.5 py-2">{it.name}</td>
-                    <td className="border border-line2 px-2.5 py-2 text-center font-mono">{it.qty}</td>
-                    <td className="border border-line2 px-2.5 py-2 text-center">{it.unit}</td>
-                    <td className="border border-line2 px-2.5 py-2 text-right font-mono">{fmtMoney(it.price)}</td>
-                    <td className="border border-line2 px-2.5 py-2 text-right font-mono font-semibold">{fmtMoney(it.qty * it.price)}</td>
+                    <td className="border border-ink/60 px-2 py-2 text-center font-mono text-mut">{i + 1}</td>
+                    <td className="border border-ink/60 px-2 py-2">{it.name}</td>
+                    <td className="border border-ink/60 px-2 py-2 text-center font-mono">{it.qty}</td>
+                    <td className="border border-ink/60 px-2 py-2 text-center">{it.unit}</td>
+                    <td className="border border-ink/60 px-2 py-2 text-center text-[10.5px] text-mut">{doc.vat ? "20 %" : "Без НДС"}</td>
+                    <td className="border border-ink/60 px-2 py-2 text-right font-mono">{fmtMoney(it.price)}</td>
+                    <td className="border border-ink/60 px-2 py-2 text-right font-mono font-semibold">{fmtMoney(it.qty * it.price)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <div className="ml-auto mt-5 w-72 text-[12.5px]">
-              <p className="flex justify-between py-1"><span className="text-mut">Итого:</span><span className="font-mono font-semibold">{fmtMoney(subtotal)}</span></p>
-              <p className="flex justify-between py-1">
-                <span className="text-mut">{doc.vat ? "в т.ч. НДС 20 %:" : "НДС:"}</span>
-                <span className="font-mono font-semibold">{doc.vat ? fmtMoney(vat) : "не облагается"}</span>
+            {/* итоги */}
+            <div className="ml-auto mt-3 w-80 text-[12px]">
+              <p className="flex justify-between border-b border-line py-1.5"><span className="text-mut">Итого:</span><span className="font-mono font-semibold">{fmtMoney(subtotal)}</span></p>
+              <p className="flex justify-between border-b border-line py-1.5">
+                <span className="text-mut">Сумма НДС:</span>
+                <span className="font-mono font-semibold">{doc.vat ? fmtMoney(vat) : "0,00"}</span>
               </p>
-              <p className="mt-1 flex justify-between border-t-2 border-ink pt-2.5 text-[15px] font-bold">
-                <span>ВСЕГО К ОПЛАТЕ:</span><span className="font-mono">{fmtMoney(total)}</span>
+              <p className="flex justify-between py-2 text-[14px] font-bold">
+                <span>Всего к оплате:</span><span className="font-mono">{fmtMoney(total)}</span>
               </p>
               {paid > 0 && (
                 <p className="mt-2 flex items-baseline justify-between text-[12.5px]">
@@ -231,16 +274,15 @@ export default function DocumentPreview({
             <p className="mt-6 text-[12px] italic text-mut">{amountInWords(total)}</p>
             {doc.note && <p className="mt-4 text-[12px]"><span className="font-semibold">Примечание:</span> {doc.note}</p>}
 
-            <div className="mt-12 grid grid-cols-2 gap-10 text-[12.5px]">
-              <p>
-                Руководитель
-                <span className="mx-3 inline-block w-32 border-b border-dotted border-ink align-baseline" />
-                {own.director}
-              </p>
-              <p>
-                Бухгалтер
-                <span className="mx-3 inline-block w-32 border-b border-dotted border-ink align-baseline" />
-              </p>
+            <div className="mt-14 grid grid-cols-2 gap-8 text-[11.5px]">
+              <div>
+                <p className="border-b border-dotted border-ink pb-1 text-center" />
+                <p className="mt-1 text-center font-semibold">{displayName(own.name)}</p>
+              </div>
+              <div>
+                <p className="border-b border-dotted border-ink pb-1 text-center" />
+                <p className="mt-1 text-center">Бухгалтер {own.director}</p>
+              </div>
             </div>
 
             <div className="mt-10 border-t-2 border-ink pt-3">

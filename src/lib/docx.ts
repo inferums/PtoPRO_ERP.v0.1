@@ -60,7 +60,23 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 800);
 }
 
-const requisitesTable = (own: Own) =>
+/* фирменная шапка: название + контакты */
+const letterhead = (own: Own) => [
+  new Paragraph({
+    spacing: { after: 40 },
+    children: [
+      run("PtoPRO", { size: 28, bold: true, color: BRAND }),
+      run("   документооборот", { size: 14, color: GREY }),
+    ],
+  }),
+  new Paragraph({
+    spacing: { after: 20 },
+    children: [run([own.address, own.phone ? `тел.: ${own.phone}` : "", own.email ? `e-mail: ${own.email}` : "", own.website].filter(Boolean).join("   ·   "), { size: 15, color: GREY })],
+  }),
+];
+
+/* банковская таблица в классическом российском формате */
+const bankTable = (own: Own) =>
   new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders,
@@ -69,20 +85,66 @@ const requisitesTable = (own: Own) =>
         children: [
           new TableCell({
             width: { size: 55, type: WidthType.PERCENTAGE },
+            rowSpan: 2,
             children: [
-              new Paragraph({ spacing: { before: 60, after: 20 }, children: [run("ПОСТАВЩИК", { size: 15, bold: true, color: GREY })] }),
-              new Paragraph({ spacing: { after: 20 }, children: [run(displayName(own.name), { bold: true })] }),
-              new Paragraph({ spacing: { after: 20 }, children: [run(`ИНН ${own.inn ?? "—"}`)] }),
-              ...(own.address ? [new Paragraph({ spacing: { after: 60 }, children: [run(own.address)] })] : []),
+              new Paragraph({ spacing: { before: 40, after: 20 }, children: [run(own.bank, { bold: true, size: 17 })] }),
+              new Paragraph({ children: [run("Банк получателя", { size: 15, color: GREY })] }),
             ],
           }),
+          new TableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [run("БИК", { size: 15, color: GREY })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(own.bik, { size: 17 })] })] }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [run("Сч. №", { size: 15, color: GREY })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(own.corrAccount ?? "", { size: 17 })] })] }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [run(`ИНН ${own.inn ?? "—"}`, { size: 17 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run("Сч. №", { size: 15, color: GREY })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(own.account, { size: 17 })] })] }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ columnSpan: 3, children: [new Paragraph({ spacing: { before: 40 }, children: [run(displayName(own.name), { bold: true, size: 17 })] })] }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ columnSpan: 3, children: [new Paragraph({ children: [run("Получатель", { size: 15, color: GREY })] })] }),
+        ],
+      }),
+    ],
+  });
+
+/* блок Поставщик / Покупатель / Основание */
+const partiesTable = (own: Own, party: Party | undefined, contractNo: string, date: string) =>
+  new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders,
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [run("Поставщик:", { size: 16, color: GREY })] })] }),
           new TableCell({
-            children: [
-              new Paragraph({ spacing: { before: 60, after: 20 }, children: [run(own.bank)] }),
-              new Paragraph({ spacing: { after: 20 }, children: [run(`БИК ${own.bik}${own.corrAccount ? "   ·   Корр. счёт " + own.corrAccount : ""}`)] }),
-              new Paragraph({ spacing: { after: 20 }, children: [run(`Р/счёт ${own.account}`)] }),
-            ],
+            children: [new Paragraph({ children: [run(`${displayName(own.name)}, ИНН ${own.inn ?? "—"}${own.address ? ", " + own.address : ""}`, { size: 16 })] })],
           }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [run("Покупатель:", { size: 16, color: GREY })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(`${party?.name ?? ""}${party?.inn ? ", ИНН " + party.inn : ""}`, { size: 16 })] })] }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [run("Основание:", { size: 16, color: GREY })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(contractNo ? `договор № ${contractNo} от ${date} г.` : "—", { size: 16 })] })] }),
         ],
       }),
     ],
@@ -95,18 +157,20 @@ const footerLine = (own: Own) =>
     children: [run([own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  "), { size: 15, color: GREY })],
   });
 
-export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own) {
+export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own, contractNo?: string) {
   const { subtotal, vat, total } = calc(doc);
   const typeMeta = TYPE_META[doc.type];
+  const date = fmtDate(doc.date);
 
   const headerRow = new TableRow({
     children: [
-      cell("№", { width: 6, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
-      cell("Наименование", { bold: true, fill: "F2F6FB" }),
-      cell("Кол-во", { width: 11, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
-      cell("Ед.", { width: 9, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
-      cell("Цена", { width: 16, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
-      cell("Сумма", { width: 16, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
+      cell("№", { width: 5, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("Товары (работы, услуги)", { bold: true, fill: "F2F6FB" }),
+      cell("Кол-во", { width: 10, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("Ед.", { width: 8, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("НДС", { width: 12, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("Цена", { width: 15, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
+      cell("Сумма", { width: 15, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
     ],
   });
 
@@ -118,6 +182,7 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own)
           cell(it.name),
           cell(String(it.qty), { align: AlignmentType.CENTER }),
           cell(it.unit, { align: AlignmentType.CENTER }),
+          cell(doc.vat ? "20 %" : "Без НДС", { align: AlignmentType.CENTER, color: GREY }),
           cell(fmtMoney(it.price), { align: AlignmentType.RIGHT }),
           cell(fmtMoney(it.qty * it.price), { align: AlignmentType.RIGHT, bold: true }),
         ],
@@ -130,33 +195,31 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own)
       {
         properties: {},
         children: [
-          requisitesTable(own),
-          new Paragraph({ spacing: { before: 480, after: 60 }, children: [run(`${typeMeta.title} № ${doc.number}`, { size: 32, bold: true })] }),
-          new Paragraph({ spacing: { after: 300 }, children: [run(`от ${fmtDate(doc.date)}`, { color: GREY })] }),
-          new Paragraph({
-            spacing: { after: 60 },
-            children: [run("Покупатель: ", { bold: true }), run(`${party?.name ?? "— не указан —"}${party?.inn ? ", ИНН " + party.inn : ""}`)],
-          }),
-          ...(party?.person ? [new Paragraph({ spacing: { after: 200 }, children: [run(`Контактное лицо: ${party.person}`, { color: GREY })] })] : []),
+          ...letterhead(own),
+          bankTable(own),
+          new Paragraph({ spacing: { before: 320, after: 200 }, alignment: AlignmentType.CENTER, children: [run(`${typeMeta.title} № ${doc.number} от ${date} г.`, { size: 26, bold: true })] }),
+          partiesTable(own, party, contractNo ?? "", date),
+          new Paragraph({ spacing: { before: 240 }, children: [] }),
           new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders, rows: [headerRow, ...itemRows] }),
-          new Paragraph({ spacing: { before: 240 }, alignment: AlignmentType.RIGHT, children: [run("Итого: ", { color: GREY }), run(fmtMoney(subtotal), { bold: true })] }),
+          new Paragraph({ spacing: { before: 200 }, alignment: AlignmentType.RIGHT, children: [run("Итого: ", { color: GREY }), run(fmtMoney(subtotal), { bold: true })] }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            children: [run(doc.vat ? "в т.ч. НДС 20 %: " : "НДС: ", { color: GREY }), run(doc.vat ? fmtMoney(vat) : "не облагается", { bold: true })],
+            children: [run("Сумма НДС: ", { color: GREY }), run(doc.vat ? fmtMoney(vat) : "0,00", { bold: true })],
           }),
           new Paragraph({
             spacing: { before: 120 },
             alignment: AlignmentType.RIGHT,
-            children: [run("ВСЕГО К ОПЛАТЕ: ", { size: 24, bold: true }), run(fmtMoney(total), { size: 24, bold: true, color: BRAND })],
+            children: [run("Всего к оплате: ", { size: 24, bold: true }), run(fmtMoney(total), { size: 24, bold: true, color: BRAND })],
           }),
           new Paragraph({ spacing: { before: 200 }, children: [run(amountInWords(total), { color: GREY })] }),
           ...(doc.note ? [new Paragraph({ spacing: { before: 160 }, children: [run("Примечание: ", { bold: true }), run(doc.note)] })] : []),
           ...(doc.status === "paid"
-            ? [new Paragraph({ spacing: { before: 400 }, alignment: AlignmentType.CENTER, children: [run(`ОПЛАЧЕНО · ${fmtDate(doc.date)}`, { size: 28, bold: true, color: "2743C7" })] })]
+            ? [new Paragraph({ spacing: { before: 400 }, alignment: AlignmentType.CENTER, children: [run(`ОПЛАЧЕНО · ${date}`, { size: 28, bold: true, color: "2743C7" })] })]
             : []),
-          new Paragraph({ spacing: { before: 700 }, children: [run(`Руководитель  ______________________  ${own.director}`)] }),
-          new Paragraph({ spacing: { before: 200 }, children: [run("Бухгалтер  ______________________")] }),
-          footerLine(own),
+          new Paragraph({ spacing: { before: 600 }, children: [run("______________________")] }),
+          new Paragraph({ children: [run(displayName(own.name), { bold: true, size: 17 })] }),
+          new Paragraph({ spacing: { before: 300 }, children: [run("______________________")] }),
+          new Paragraph({ children: [run(`Бухгалтер ${own.director}`, { size: 17 })] }),
         ],
       },
     ],
