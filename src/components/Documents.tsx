@@ -67,8 +67,8 @@ export default function Documents({
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             onClick={() => setFilter("all")}
-            className={`cursor-pointer border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-all ${
-              filter === "all" ? "border-navy bg-navy text-white" : "border-line bg-surface text-mut hover:border-line2 hover:text-ink"
+            className={`cursor-pointer rounded-md border px-3 py-1.5 text-[11.5px] font-semibold transition-all ${
+              filter === "all" ? "border-navy bg-navy text-white shadow-sm" : "border-line bg-surface text-mut hover:border-line2 hover:text-ink"
             }`}
           >
             все · {docs.length}
@@ -77,8 +77,8 @@ export default function Documents({
             <button
               key={s}
               onClick={() => setFilter(filter === s ? "all" : s)}
-              className={`cursor-pointer border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-all ${
-                filter === s ? "border-navy bg-navy text-white" : "border-line bg-surface text-mut hover:border-line2 hover:text-ink"
+              className={`cursor-pointer rounded-md border px-3 py-1.5 text-[11.5px] font-semibold transition-all ${
+                filter === s ? "border-navy bg-navy text-white shadow-sm" : "border-line bg-surface text-mut hover:border-line2 hover:text-ink"
               }`}
             >
               <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ background: STATUS_META[s].dot }} />
@@ -92,12 +92,13 @@ export default function Documents({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Поиск: номер, контрагент, позиция"
-            className="w-full border border-line bg-surface py-2.5 pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-dim focus:border-brand"
+            className="w-full rounded-md border border-line bg-surface py-2.5 pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-dim focus:border-brand focus:ring-[3px] focus:ring-brand/15"
           />
         </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto border border-line bg-surface">
+      <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+        <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse text-left">
           <thead>
             <tr className="border-b border-line bg-soft">
@@ -191,6 +192,7 @@ export default function Documents({
           </tbody>
         </table>
 
+        </div>
         {filtered.length === 0 && (
           <div className="p-12 text-center">
             <p className="font-display text-[15px] font-bold text-ink">Ничего не нашлось</p>
@@ -205,7 +207,7 @@ export default function Documents({
               >
                 сбросить
               </button>
-              <button onClick={onNew} className="flex cursor-pointer items-center gap-2 bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2">
+              <button onClick={onNew} className="flex cursor-pointer items-center gap-2 rounded-md bg-brand px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2">
                 <IconPlus size={13} /> новый документ
               </button>
             </div>

@@ -51,8 +51,8 @@ export default function Finance({
   const sortedPays = [...payments].sort((a, b) => b.date.localeCompare(a.date));
 
   const stat = (label: string, value: number, color: string) => (
-    <div className="border border-line bg-surface px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.3)]">
-      <p className="text-center text-[11px] font-medium text-mut">{label}</p>
+    <div className="rounded-xl border border-line bg-surface px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-16px_rgba(14,36,60,0.3)]">
+      <p className="text-center text-[11px] font-semibold text-mut">{label}</p>
       <p className={`mt-1.5 text-center font-display text-[22px] font-extrabold leading-tight ${color}`}>{fmtMoney(value)}</p>
     </div>
   );
@@ -67,7 +67,7 @@ export default function Finance({
       </div>
 
       {/* P&L по договорам */}
-      <div className="overflow-x-auto border border-line bg-surface">
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <h3 className="font-display text-[14px] font-bold text-ink">Прибыли и убытки по договорам</h3>
           <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-dim">план / факт</span>
@@ -103,7 +103,7 @@ export default function Finance({
       </div>
 
       {/* реестр оплат */}
-      <div className="overflow-x-auto border border-line bg-surface">
+      <div className="overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <h3 className="font-display text-[14px] font-bold text-ink">Реестр платежей · {payments.length}</h3>
           <button
