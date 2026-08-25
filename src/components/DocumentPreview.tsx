@@ -5,6 +5,7 @@ import {
   displayName,
   fmtDate,
   fmtMoney,
+  personName,
   suggestPaymentName,
   STATUS_META,
   TYPE_META,
@@ -16,7 +17,7 @@ import {
   type Payment,
 } from "../lib/store";
 import PaymentForm from "./PaymentForm";
-import { IconArrow, IconDownload, IconPencil, IconPrint, IconTrash } from "./icons";
+import { IconArrow, IconDownload, IconPencil, IconPrint, IconTrash, Logo } from "./icons";
 
 function Stamp({ date, short }: { date: string; short: string }) {
   return (
@@ -143,7 +144,7 @@ export default function DocumentPreview({
             {/* фирменная шапка: логотип + контакты */}
             <div className="flex items-start justify-between gap-4 border-b-2 border-brand pb-4">
               <div className="flex items-center gap-3">
-                <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand font-display text-[16px] font-extrabold text-white">П</span>
+                <Logo size={48} />
                 <div>
                   <p className="font-display text-[15px] font-extrabold leading-tight text-ink">PtoPRO</p>
                   <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-dim">документооборот</p>
@@ -281,15 +282,29 @@ export default function DocumentPreview({
               </div>
               <div>
                 <p className="border-b border-dotted border-ink pb-1 text-center" />
-                <p className="mt-1 text-center">Бухгалтер {own.director}</p>
+                <p className="mt-1 text-center">Бухгалтер {personName(own.name)}</p>
               </div>
             </div>
 
-            <div className="mt-10 border-t-2 border-ink pt-3">
-              <p className="text-center font-display text-[11px] font-bold tracking-[0.08em] text-ink">{own.short}</p>
-              <p className="mt-1 text-center text-[10.5px] leading-relaxed text-mut">
-                {[own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  ") || "реквизиты не заполнены"}
-              </p>
+            <div className="mt-10 flex items-end justify-between gap-4 border-t-2 border-ink pt-4">
+              {/* фирменная печать */}
+              <svg width="86" height="86" viewBox="0 0 100 100" className="shrink-0 -rotate-12 opacity-80" aria-hidden="true">
+                <circle cx="50" cy="50" r="47" fill="none" stroke="#2743c7" strokeWidth="2.5" />
+                <circle cx="50" cy="50" r="36" fill="none" stroke="#2743c7" strokeWidth="1.5" />
+                <circle cx="50" cy="50" r="20" fill="none" stroke="#2743c7" strokeWidth="1" />
+                <text x="50" y="47" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2743c7" fontFamily="Arial">
+                  {own.short}
+                </text>
+                <text x="50" y="57" textAnchor="middle" fontSize="5.5" fill="#2743c7" fontFamily="Arial">
+                  ДЛЯ ДОКУМЕНТОВ
+                </text>
+              </svg>
+              <div className="min-w-0 flex-1 text-right">
+                <p className="font-display text-[11px] font-bold tracking-[0.08em] text-ink">{own.short}</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-mut">
+                  {[own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  ") || "реквизиты не заполнены"}
+                </p>
+              </div>
             </div>
           </div>
 

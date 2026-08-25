@@ -311,6 +311,14 @@ export function plural(n: number, f: [string, string, string]): string {
 export const displayName = (name: string) =>
   name.trim().toLowerCase().startsWith("ип ") || name.trim().toLowerCase() === "ип" ? name.trim() : `ИП ${name.trim()}`;
 
+/* Полное ФИО без префиксов «ИП» / «Индивидуальный предприниматель» — для строки «Бухгалтер …» */
+export const personName = (name: string) =>
+  name
+    .trim()
+    .replace(/^индивидуальный предприниматель\s+/i, "")
+    .replace(/^ип\s+/i, "")
+    .trim();
+
 /* ---------- сумма прописью ---------- */
 
 const U_M = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
