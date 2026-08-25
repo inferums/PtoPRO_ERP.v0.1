@@ -1,9 +1,57 @@
-/* Автоопределение фирменного логотипа.
-   Если в public/ лежит logo.svg или logo.png — он подхватывается везде
-   (favicon, панель, форма входа, шапка счёта). Иначе используется встроенный знак. */
+/* Фирменный логотип системы.
+   Приоритет: загруженный пользователем логотип (localStorage) →
+   файл /logo.svg или /logo.png в public/ → встроенный рисованный знак.
+   Логотип глобальный (один на установку), поэтому виден и на экране входа. */
 
-let cached: string | null | undefined = undefined;
-let pending: Promise<string | null> | null = null;
+import { useEffect, useState } from "react";
+
+const LOGO_KEY = "ip-dok-v2:logo";
+const LOGO_EVENT = "brand:logo";
+
+export function getStoredLogo(): string | null {
+  try {
+    return localStorage.getItem(LOGO_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/* Сохраняет (или очищает) загруженный логотип и сразу обновляет favicon */
+export function storeLogo(dataUrl: string | null): void {
+  try {
+    if (dataUrl) localStorage.setItem(LOGO_KEY, dataUrl);
+    else localStorage.removeItem(LOGO_KEY);
+  } catch {
+    /* приватный режим — просто не сохраняем */
+  }
+  setFavicon(dataUrl ?? undefined);
+  window.dispatchEvent(new Event(LOGO_EVENT));
+}
+
+/* ---------- favicon ---------- */
+
+function setFavicon(href: string | undefined): void {
+  let icon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+  if (!icon) {
+    icon = document.createElement("link");
+    icon.rel = "icon";
+    document.head.appendChild(icon);
+  }
+  if (href) {
+    icon.type = href.startsWith("data:image/svg") || href.endsWith(".svg") ? "image/svg+xml" : "image/png";
+    icon.href = href;
+  } else {
+    icon.href = "/icon-maskable.svg";
+    icon.type = "image/svg+xml";
+  }
+  const apple = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
+  if (apple) apple.href = href ?? "/icon-maskable.svg";
+}
+
+/* ---------- автоопределение файла в public/ (фолбэк) ---------- */
+
+let fileLogo: string | null | undefined = undefined;
+let filePending: Promise<string | null> | null = null;
 
 async function probe(url: string): Promise<boolean> {
   try {
@@ -14,36 +62,58 @@ async function probe(url: string): Promise<boolean> {
   }
 }
 
-export function detectBrandLogo(): Promise<string | null> {
-  if (cached !== undefined) return Promise.resolve(cached);
-  if (pending) return pending;
-  pending = (async () => {
+function detectFileLogo(): Promise<string | null> {
+  if (fileLogo !== undefined) return Promise.resolve(fileLogo);
+  if (filePending) return filePending;
+  filePending = (async () => {
     for (const candidate of ["/logo.svg", "/logo.png"]) {
       if (await probe(candidate)) {
-        cached = candidate;
-        return cached;
+        fileLogo = candidate;
+        return fileLogo;
       }
     }
-    cached = null;
-    return cached;
+    fileLogo = null;
+    return fileLogo;
   })();
-  return pending;
+  return filePending;
 }
 
-/* Подменяет favicon и apple-touch-icon на реальный логотип, если он есть */
-export function applyBrandFavicon(): void {
-  detectBrandLogo().then((url) => {
-    if (!url) return;
-    let icon = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-    if (!icon) {
-      icon = document.createElement("link");
-      icon.rel = "icon";
-      document.head.appendChild(icon);
-    }
-    icon.type = url.endsWith(".svg") ? "image/svg+xml" : "image/png";
-    icon.href = url;
+/* ---------- хук: актуальный логотип (undefined = ещё определяется, null = нет, string = URL) ---------- */
 
-    const apple = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
-    if (apple) apple.href = url;
+export function useBrandLogo(): string | null | undefined {
+  const [src, setSrc] = useState<string | null | undefined>(() => getStoredLogo() ?? undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = () => {
+      const stored = getStoredLogo();
+      if (stored) {
+        setSrc(stored);
+        return;
+      }
+      detectFileLogo().then((u) => {
+        if (mounted) setSrc(u);
+      });
+    };
+    load();
+    window.addEventListener(LOGO_EVENT, load);
+    return () => {
+      mounted = false;
+      window.removeEventListener(LOGO_EVENT, load);
+    };
+  }, []);
+
+  return src;
+}
+
+/* Вызывается при старте: ставит favicon (загруженный логотип или найденный файл) */
+export function applyBrandFavicon(): void {
+  const stored = getStoredLogo();
+  if (stored) {
+    setFavicon(stored);
+    return;
+  }
+  detectFileLogo().then((url) => {
+    if (url) setFavicon(url);
   });
 }
