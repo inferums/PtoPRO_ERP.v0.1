@@ -5,6 +5,7 @@ import {
   displayName,
   fmtDate,
   fmtMoney,
+  personName,
   suggestPaymentName,
   STATUS_META,
   TYPE_META,
@@ -281,7 +282,7 @@ export default function DocumentPreview({
               </div>
               <div>
                 <p className="border-b border-dotted border-ink pb-1 text-center" />
-                <p className="mt-1 text-center">Бухгалтер {own.director}</p>
+                <p className="mt-1 text-center">Бухгалтер {personName(own.name)}</p>
               </div>
             </div>
 
