@@ -2,6 +2,7 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  ImageRun,
   Packer,
   Paragraph,
   Table,
@@ -11,6 +12,7 @@ import {
   VerticalAlign,
   WidthType,
 } from "docx";
+import { readBrand, type BrandKey } from "./brand";
 import {
   amountInWords,
   calc,
@@ -61,20 +63,61 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 800);
 }
 
+/* ---------- фирменные изображения (логотип / печать / подпись) ---------- */
+
+function dataUrlToBytes(dataUrl: string): Uint8Array | null {
+  try {
+    const base64 = dataUrl.split(",")[1];
+    if (!base64) return null;
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+/* Возвращает абзац с картинкой или null, если изображение не загружено (или SVG — Word его не принимает) */
+function brandImage(key: BrandKey, widthPx: number, heightPx: number, align: Align): Paragraph | null {
+  const src = readBrand(key);
+  if (!src || src.startsWith("data:image/svg")) return null;
+  const data = dataUrlToBytes(src);
+  if (!data) return null;
+  const type = src.startsWith("data:image/jpeg") || src.startsWith("data:image/jpg")
+    ? "jpg"
+    : src.startsWith("data:image/gif")
+      ? "gif"
+      : src.startsWith("data:image/bmp")
+        ? "bmp"
+        : "png";
+  try {
+    return new Paragraph({
+      alignment: align,
+      children: [new ImageRun({ type, data, transformation: { width: widthPx, height: heightPx } })],
+    });
+  } catch {
+    return null;
+  }
+}
+
 /* фирменная шапка: название + контакты */
-const letterhead = (own: Own) => [
-  new Paragraph({
-    spacing: { after: 40 },
-    children: [
-      run("PtoPRO", { size: 28, bold: true, color: BRAND }),
-      run("   документооборот", { size: 14, color: GREY }),
-    ],
-  }),
-  new Paragraph({
-    spacing: { after: 20 },
-    children: [run([own.address, own.phone ? `тел.: ${own.phone}` : "", own.email ? `e-mail: ${own.email}` : "", own.website].filter(Boolean).join("   ·   "), { size: 15, color: GREY })],
-  }),
-];
+const letterhead = (own: Own) => {
+  const logo = brandImage("logo", 88, 88, AlignmentType.CENTER);
+  return [
+    ...(logo ? [logo] : []),
+    new Paragraph({
+      spacing: { before: logo ? 60 : 0, after: 20 },
+      alignment: AlignmentType.CENTER,
+      children: [run(own.short, { size: 24, bold: true })],
+    }),
+    new Paragraph({
+      spacing: { after: 20 },
+      alignment: AlignmentType.CENTER,
+      children: [run([own.address, own.phone ? `тел.: ${own.phone}` : "", own.email ? `e-mail: ${own.email}` : "", own.website].filter(Boolean).join("   ·   "), { size: 15, color: GREY })],
+    }),
+  ];
+};
 
 /* банковская таблица в классическом российском формате */
 const bankTable = (own: Own) =>
@@ -163,6 +206,11 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own,
   const typeMeta = TYPE_META[doc.type];
   const date = fmtDate(doc.date);
 
+  /* фирменные изображения: подпись и печать (если загружены) */
+  const mkSig = () => brandImage("signature", 150, 46, AlignmentType.LEFT);
+  const hasSig = !!mkSig();
+  const stampImg = brandImage("stamp", 100, 100, AlignmentType.LEFT);
+
   const headerRow = new TableRow({
     children: [
       cell("№", { width: 5, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
@@ -217,11 +265,13 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own,
           ...(doc.status === "paid"
             ? [new Paragraph({ spacing: { before: 400 }, alignment: AlignmentType.CENTER, children: [run(`ОПЛАЧЕНО · ${date}`, { size: 28, bold: true, color: "2743C7" })] })]
             : []),
-          new Paragraph({ spacing: { before: 600 }, children: [run("______________________")] }),
+          ...(hasSig ? [mkSig()!] : []),
+          new Paragraph({ spacing: { before: hasSig ? 100 : 600 }, children: [run("______________________")] }),
           new Paragraph({ children: [run(displayName(own.name), { bold: true, size: 17 })] }),
-          new Paragraph({ spacing: { before: 300 }, children: [run("______________________")] }),
+          ...(hasSig ? [mkSig()!] : []),
+          new Paragraph({ spacing: { before: hasSig ? 100 : 300 }, children: [run("______________________")] }),
           new Paragraph({ children: [run(`Бухгалтер ${personName(own.name)}`, { size: 17 })] }),
-          new Paragraph({ spacing: { before: 400 }, children: [run("М.П.", { size: 17, color: GREY })] }),
+          ...(stampImg ? [stampImg] : [new Paragraph({ spacing: { before: 400 }, children: [run("М.П.", { size: 17, color: GREY })] })]),
         ],
       },
     ],

@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { detectBrandLogo } from "../lib/brand";
+import type { ReactNode } from "react";
+import { useBrandLogo } from "../lib/brand";
 
 type P = { size?: number; className?: string };
 
@@ -188,18 +188,8 @@ export const IconPhone = (p: P) => (
   </Svg>
 );
 
-export function Logo({ size = 36 }: { size?: number }) {
-  const [brandUrl, setBrandUrl] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    let mounted = true;
-    detectBrandLogo().then((url) => {
-      if (mounted) setBrandUrl(url);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+export function Logo({ size = 36, rounded = true }: { size?: number; rounded?: boolean }) {
+  const brandUrl = useBrandLogo();
 
   if (brandUrl) {
     return (
@@ -207,8 +197,8 @@ export function Logo({ size = 36 }: { size?: number }) {
         src={brandUrl}
         width={size}
         height={size}
-        alt="PtoPRO-ERP"
-        className="shrink-0 rounded-xl object-contain"
+        alt="Логотип компании"
+        className={`shrink-0 object-contain ${rounded ? "rounded-xl" : ""}`}
         style={{ width: size, height: size }}
       />
     );

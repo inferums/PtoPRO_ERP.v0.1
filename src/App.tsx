@@ -24,6 +24,7 @@ import {
   type View,
 } from "./lib/store";
 import { clearSession, loadSession, type Session, type User } from "./lib/auth";
+import { fileToDataUrl, useBrandImage, writeBrand, type BrandKey } from "./lib/brand";
 import AuthScreen from "./components/AuthScreen";
 import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
@@ -77,6 +78,112 @@ const TITLES: Record<View, { t: string; s: string }> = {
   settings: { t: "Настройки", s: "реквизиты, резервные копии, среда" },
 };
 
+/* ---------- фирменный стиль: логотип, печать, подпись ---------- */
+
+function BrandSlot({
+  k,
+  title,
+  hint,
+  onToast,
+}: {
+  k: BrandKey;
+  title: string;
+  hint: string;
+  onToast: (t: string, tone?: "ok" | "err") => void;
+}) {
+  const src = useBrandImage(k);
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const dataUrl = await fileToDataUrl(file, k === "logo" ? 512 : 640);
+      writeBrand(k, dataUrl);
+      onToast(`${title} сохранён — подхватится во всех документах`);
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Не удалось загрузить файл", "err");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-line bg-soft p-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-semibold text-ink">{title}</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-dim">{hint}</p>
+        </div>
+        <div
+          className="grid h-16 w-24 shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-white"
+          style={{
+            backgroundImage:
+              "linear-gradient(45deg,#eef1f7 25%,transparent 25%,transparent 75%,#eef1f7 75%),linear-gradient(45deg,#eef1f7 25%,transparent 25%,transparent 75%,#eef1f7 75%)",
+            backgroundSize: "12px 12px",
+            backgroundPosition: "0 0,6px 6px",
+          }}
+        >
+          {src ? (
+            <img src={src} alt={title} className="h-full w-full object-contain p-1" />
+          ) : (
+            <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-dim">нет файла</span>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => ref.current?.click()}
+          disabled={busy}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-brand/50 px-2.5 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-brand transition-colors hover:bg-brand hover:text-white disabled:opacity-50"
+        >
+          <IconDownload size={12} className="rotate-180" /> {busy ? "обработка…" : src ? "заменить" : "загрузить"}
+        </button>
+        {src && (
+          <button
+            onClick={() => {
+              writeBrand(k, null);
+              onToast(`${title} удалён — вернётся встроенный вариант`, "ok");
+            }}
+            className="cursor-pointer rounded-md border border-line px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-mut transition-colors hover:border-danger hover:text-danger"
+          >
+            убрать
+          </button>
+        )}
+        <input
+          ref={ref}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={(e) => {
+            void pick(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BrandCard({ onToast }: { onToast: (t: string, tone?: "ok" | "err") => void }) {
+  return (
+    <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
+      <h3 className="font-display text-[14px] font-bold text-ink">Фирменный стиль</h3>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-mut">
+        Логотип появляется в панели, на экране входа, в favicon и в шапке документов. Печать и подпись
+        подставляются в счета и акты. Всё <span className="font-semibold text-ink">сохраняется в браузере</span> —
+        загружать заново не придётся.
+      </p>
+      <div className="mt-4 space-y-3">
+        <BrandSlot k="logo" title="Логотип компании" hint="PNG, JPG, SVG или WEBP · до 4 МБ" onToast={onToast} />
+        <BrandSlot k="stamp" title="Оттиск печати" hint="Круглая печать, желательно на прозрачном фоне" onToast={onToast} />
+        <BrandSlot k="signature" title="Подпись руководителя" hint="Скан или фото подписи, прозрачный фон" onToast={onToast} />
+      </div>
+    </div>
+  );
+}
+
 /* ---------- реквизиты ---------- */
 
 function SettingsView({
@@ -85,12 +192,14 @@ function SettingsView({
   onReset,
   onExport,
   onImport,
+  onToast,
 }: {
   own: Own;
   onSave: (o: Own) => void;
   onReset: () => void;
   onExport: () => void;
   onImport: (f: File) => void;
+  onToast: (t: string, tone?: "ok" | "err") => void;
 }) {
   const [f, setF] = useState({ ...own });
   const [confirmReset, setConfirmReset] = useState(false);
@@ -101,7 +210,7 @@ function SettingsView({
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <div className="fade-up grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+    <div className="fade-up grid gap-4 xl:grid-cols-[1.2fr_0.9fr_0.9fr]">
       <div className="rounded-xl border border-line bg-surface p-6 shadow-sm md:p-7">
         <h3 className="font-display text-[15px] font-bold text-ink">Реквизиты поставщика</h3>
         <p className="mt-1 text-[12.5px] text-mut">Эти данные попадают в шапку и колонтитул каждого счёта, акта и договора</p>
@@ -164,6 +273,8 @@ function SettingsView({
           сохранить реквизиты
         </button>
       </div>
+
+      <BrandCard onToast={onToast} />
 
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
@@ -790,6 +901,7 @@ export default function App() {
                 }}
                 onExport={exportBackup}
                 onImport={importBackup}
+                onToast={toast}
               />
             )}
               </>

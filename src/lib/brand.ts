@@ -1,31 +1,82 @@
-/* Фирменный логотип системы.
-   Приоритет: загруженный пользователем логотип (localStorage) →
+/* Фирменный стиль системы: логотип, печать и подпись.
+   Приоритет логотипа: загруженный пользователем (localStorage) →
    файл /logo.svg или /logo.png в public/ → встроенный рисованный знак.
-   Логотип глобальный (один на установку), поэтому виден и на экране входа. */
+   Всё хранится локально и переживает перезагрузку — загружать заново не нужно. */
 
 import { useEffect, useState } from "react";
 
-const LOGO_KEY = "ip-dok-v2:logo";
-const LOGO_EVENT = "brand:logo";
+export type BrandKey = "logo" | "stamp" | "signature";
 
-export function getStoredLogo(): string | null {
+const KEY_PREFIX = "ip-dok-v2:brand-";
+const BRAND_EVENT = "brand:changed";
+
+/* ---------- чтение / запись ---------- */
+
+export function readBrand(key: BrandKey): string | null {
   try {
-    return localStorage.getItem(LOGO_KEY);
+    return localStorage.getItem(KEY_PREFIX + key);
   } catch {
     return null;
   }
 }
 
-/* Сохраняет (или очищает) загруженный логотип и сразу обновляет favicon */
-export function storeLogo(dataUrl: string | null): void {
+export function writeBrand(key: BrandKey, dataUrl: string | null): void {
   try {
-    if (dataUrl) localStorage.setItem(LOGO_KEY, dataUrl);
-    else localStorage.removeItem(LOGO_KEY);
+    if (dataUrl) localStorage.setItem(KEY_PREFIX + key, dataUrl);
+    else localStorage.removeItem(KEY_PREFIX + key);
   } catch {
-    /* приватный режим — просто не сохраняем */
+    /* переполнение localStorage или приватный режим — молча пропускаем */
   }
-  setFavicon(dataUrl ?? undefined);
-  window.dispatchEvent(new Event(LOGO_EVENT));
+  if (key === "logo") setFavicon(dataUrl ?? undefined);
+  window.dispatchEvent(new CustomEvent(BRAND_EVENT, { detail: key }));
+}
+
+/* ---------- подготовка файла: проверка + уменьшение до разумного размера ---------- */
+
+export function fileToDataUrl(file: File, maxDim = 512): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Нужен файл изображения (PNG, JPG, SVG или WEBP)"));
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      reject(new Error("Файл больше 4 МБ — сожмите изображение и попробуйте снова"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+    reader.onload = () => {
+      const src = String(reader.result);
+      /* SVG не растровый — храним как есть */
+      if (file.type === "image/svg+xml" || src.startsWith("data:image/svg")) {
+        resolve(src);
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => reject(new Error("Файл повреждён или имеет неподдерживаемый формат"));
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(src);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/png"));
+        } catch {
+          resolve(src);
+        }
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ---------- favicon ---------- */
@@ -48,7 +99,7 @@ function setFavicon(href: string | undefined): void {
   if (apple) apple.href = href ?? "/icon-maskable.svg";
 }
 
-/* ---------- автоопределение файла в public/ (фолбэк) ---------- */
+/* ---------- автоопределение файла в public/ (фолбэк логотипа) ---------- */
 
 let fileLogo: string | null | undefined = undefined;
 let filePending: Promise<string | null> | null = null;
@@ -78,15 +129,16 @@ function detectFileLogo(): Promise<string | null> {
   return filePending;
 }
 
-/* ---------- хук: актуальный логотип (undefined = ещё определяется, null = нет, string = URL) ---------- */
+/* ---------- хуки ---------- */
 
+/* Логотип: undefined = ещё определяется, null = встроенный знак, string = URL */
 export function useBrandLogo(): string | null | undefined {
-  const [src, setSrc] = useState<string | null | undefined>(() => getStoredLogo() ?? undefined);
+  const [src, setSrc] = useState<string | null | undefined>(() => readBrand("logo") ?? undefined);
 
   useEffect(() => {
     let mounted = true;
     const load = () => {
-      const stored = getStoredLogo();
+      const stored = readBrand("logo");
       if (stored) {
         setSrc(stored);
         return;
@@ -96,19 +148,34 @@ export function useBrandLogo(): string | null | undefined {
       });
     };
     load();
-    window.addEventListener(LOGO_EVENT, load);
+    const onBrand = () => load();
+    window.addEventListener(BRAND_EVENT, onBrand);
     return () => {
       mounted = false;
-      window.removeEventListener(LOGO_EVENT, load);
+      window.removeEventListener(BRAND_EVENT, onBrand);
     };
   }, []);
 
   return src;
 }
 
-/* Вызывается при старте: ставит favicon (загруженный логотип или найденный файл) */
+/* Печать / подпись: null = не загружено */
+export function useBrandImage(key: BrandKey): string | null {
+  const [src, setSrc] = useState<string | null>(() => readBrand(key));
+
+  useEffect(() => {
+    const load = () => setSrc(readBrand(key));
+    load();
+    window.addEventListener(BRAND_EVENT, load);
+    return () => window.removeEventListener(BRAND_EVENT, load);
+  }, [key]);
+
+  return src;
+}
+
+/* Вызывается при старте приложения */
 export function applyBrandFavicon(): void {
-  const stored = getStoredLogo();
+  const stored = readBrand("logo");
   if (stored) {
     setFavicon(stored);
     return;

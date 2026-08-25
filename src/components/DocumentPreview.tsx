@@ -17,6 +17,7 @@ import {
   type Payment,
 } from "../lib/store";
 import PaymentForm from "./PaymentForm";
+import { useBrandImage } from "../lib/brand";
 import { IconArrow, IconDownload, IconPencil, IconPrint, IconTrash, Logo } from "./icons";
 
 function Stamp({ date, short }: { date: string; short: string }) {
@@ -67,6 +68,9 @@ export default function DocumentPreview({
 
   const [payForm, setPayForm] = useState<null | { mode: "add" } | { mode: "edit"; pay: Payment }>(null);
   const [confirmPay, setConfirmPay] = useState<string | null>(null);
+
+  const stampImg = useBrandImage("stamp");
+  const signatureImg = useBrandImage("signature");
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -141,21 +145,19 @@ export default function DocumentPreview({
           <div id="print-sheet" className="relative h-fit w-full bg-white px-8 py-9 text-ink shadow-[0_24px_60px_-24px_rgba(28,36,50,0.45)] sm:px-11 sm:py-10">
             {doc.status === "paid" && <Stamp date={doc.date} short={own.short} />}
 
-            {/* фирменная шапка: логотип + контакты */}
-            <div className="flex items-start justify-between gap-4 border-b-2 border-brand pb-4">
-              <div className="flex items-center gap-3">
-                <Logo size={48} />
-                <div>
-                  <p className="font-display text-[15px] font-extrabold leading-tight text-ink">PtoPRO</p>
-                  <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-dim">документооборот</p>
-                </div>
+            {/* фирменная шапка: логотип по центру, контакты справа */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-4 border-b-2 border-brand pb-4">
+              <div className="hidden text-[10.5px] leading-relaxed text-dim sm:block">
+                {own.address && <p className="line-clamp-2">{own.address}</p>}
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <Logo size={64} rounded={false} />
+                <p className="mt-2 font-display text-[13px] font-extrabold leading-tight text-ink">{own.short}</p>
+                <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-dim">документооборот</p>
               </div>
               <div className="text-right text-[10.5px] leading-relaxed text-mut">
-                {own.address && <p>{own.address}</p>}
-                <p className="mt-0.5">
-                  {own.phone ? `тел.: ${own.phone}` : ""}
-                  {own.email ? ` · e-mail: ${own.email}` : ""}
-                </p>
+                <p>{own.phone ? `тел.: ${own.phone}` : ""}</p>
+                <p className="mt-0.5">{own.email ? `e-mail: ${own.email}` : ""}</p>
                 {own.website && <p>{own.website}</p>}
               </div>
             </div>
@@ -276,35 +278,45 @@ export default function DocumentPreview({
             {doc.note && <p className="mt-4 text-[12px]"><span className="font-semibold">Примечание:</span> {doc.note}</p>}
 
             <div className="mt-14 grid grid-cols-2 gap-8 text-[11.5px]">
-              <div>
-                <p className="border-b border-dotted border-ink pb-1 text-center" />
-                <p className="mt-1 text-center font-semibold">{displayName(own.name)}</p>
+              <div className="text-center">
+                <div className="flex h-12 items-end justify-center">
+                  {signatureImg && <img src={signatureImg} alt="Подпись" className="max-h-12 max-w-[170px] object-contain" />}
+                </div>
+                <p className="border-b border-dotted border-ink pb-1" />
+                <p className="mt-1 font-semibold">{displayName(own.name)}</p>
               </div>
-              <div>
-                <p className="border-b border-dotted border-ink pb-1 text-center" />
-                <p className="mt-1 text-center">Бухгалтер {personName(own.name)}</p>
+              <div className="text-center">
+                <div className="flex h-12 items-end justify-center">
+                  {signatureImg && <img src={signatureImg} alt="Подпись" className="max-h-12 max-w-[170px] object-contain" />}
+                </div>
+                <p className="border-b border-dotted border-ink pb-1" />
+                <p className="mt-1">Бухгалтер {personName(own.name)}</p>
               </div>
             </div>
 
-            <div className="mt-10 flex items-end justify-between gap-4 border-t-2 border-ink pt-4">
-              {/* фирменная печать */}
-              <svg width="86" height="86" viewBox="0 0 100 100" className="shrink-0 -rotate-12 opacity-80" aria-hidden="true">
-                <circle cx="50" cy="50" r="47" fill="none" stroke="#2743c7" strokeWidth="2.5" />
-                <circle cx="50" cy="50" r="36" fill="none" stroke="#2743c7" strokeWidth="1.5" />
-                <circle cx="50" cy="50" r="20" fill="none" stroke="#2743c7" strokeWidth="1" />
-                <text x="50" y="47" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2743c7" fontFamily="Arial">
-                  {own.short}
-                </text>
-                <text x="50" y="57" textAnchor="middle" fontSize="5.5" fill="#2743c7" fontFamily="Arial">
-                  ДЛЯ ДОКУМЕНТОВ
-                </text>
-              </svg>
-              <div className="min-w-0 flex-1 text-right">
+            <div className="mt-8 flex items-end justify-between gap-4 border-t-2 border-ink pt-4">
+              <div className="min-w-0 flex-1">
                 <p className="font-display text-[11px] font-bold tracking-[0.08em] text-ink">{own.short}</p>
                 <p className="mt-1 text-[10px] leading-relaxed text-mut">
                   {[own.address, own.phone, own.email, own.website].filter(Boolean).join("  ·  ") || "реквизиты не заполнены"}
                 </p>
               </div>
+              {/* фирменная печать в правом нижнем углу: загруженный оттиск или встроенная */}
+              {stampImg ? (
+                <img src={stampImg} alt="Печать" className="h-24 w-24 shrink-0 -rotate-12 object-contain opacity-90" />
+              ) : (
+                <svg width="86" height="86" viewBox="0 0 100 100" className="shrink-0 -rotate-12 opacity-80" aria-hidden="true">
+                  <circle cx="50" cy="50" r="47" fill="none" stroke="#2743c7" strokeWidth="2.5" />
+                  <circle cx="50" cy="50" r="36" fill="none" stroke="#2743c7" strokeWidth="1.5" />
+                  <circle cx="50" cy="50" r="20" fill="none" stroke="#2743c7" strokeWidth="1" />
+                  <text x="50" y="47" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2743c7" fontFamily="Arial">
+                    {own.short}
+                  </text>
+                  <text x="50" y="57" textAnchor="middle" fontSize="5.5" fill="#2743c7" fontFamily="Arial">
+                    ДЛЯ ДОКУМЕНТОВ
+                  </text>
+                </svg>
+              )}
             </div>
           </div>
 
