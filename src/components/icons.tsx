@@ -1,6 +1,22 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { detectBrandLogo } from "../lib/brand";
 
 type P = { size?: number; className?: string };
+
+/* Встроенный фирменный знак PtoPRO — используется, пока не положен реальный logo.png/logo.svg */
+function BuiltinLogo({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" aria-hidden="true" className="shrink-0">
+      <rect width="512" height="512" rx="112" fill="#1E88E5" />
+      <path d="M140 96h156l72 72v248H140z" fill="#ffffff" />
+      <path d="M296 96v72h72z" fill="#BBDEFB" />
+      <rect x="182" y="196" width="28" height="190" rx="9" fill="#1E88E5" />
+      <path d="M210 196h38a62 62 0 0 1 0 124h-38" stroke="#1E88E5" strokeWidth="28" strokeLinejoin="round" />
+      <circle cx="330" cy="362" r="50" fill="#ffffff" stroke="#FFB300" strokeWidth="10" />
+      <path d="M308 362l16 16 30-34" stroke="#FFB300" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function Svg({ size = 18, className = "", children }: P & { children: ReactNode }) {
   return (
@@ -173,15 +189,30 @@ export const IconPhone = (p: P) => (
 );
 
 export function Logo({ size = 36 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <rect width="40" height="40" rx="9" fill="#1E88E5" />
-      <path d="M12 9h11l5 5v17H12z" fill="#fff" />
-      <path d="M23 9v5h5z" fill="#BBDEFB" />
-      <rect x="15" y="17.5" width="10" height="1.8" rx="0.9" fill="#90A4AE" />
-      <rect x="15" y="21" width="10" height="1.8" rx="0.9" fill="#B0BEC5" />
-      <circle cx="24.5" cy="26.5" r="3.6" stroke="#FFB300" strokeWidth="1.4" />
-      <path d="m23 26.6 1.2 1.2 2-2.4" stroke="#FFB300" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  const [brandUrl, setBrandUrl] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    detectBrandLogo().then((url) => {
+      if (mounted) setBrandUrl(url);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (brandUrl) {
+    return (
+      <img
+        src={brandUrl}
+        width={size}
+        height={size}
+        alt="PtoPRO-ERP"
+        className="shrink-0 rounded-xl object-contain"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  return <BuiltinLogo size={size} />;
 }

@@ -1,4 +1,4 @@
-const CACHE = "ip-dok-v2";
+const CACHE = "ip-dok-v3";
 const SHELL = ["/", "/manifest.json", "/icon-maskable.svg"];
 
 self.addEventListener("install", (event) => {
