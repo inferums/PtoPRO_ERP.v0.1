@@ -1,11 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <rect width="512" height="512" rx="112" fill="#1E88E5"/>
-  <g>
-    <path d="M140 96h156l72 72v248H140z" fill="#ffffff"/>
-    <path d="M296 96v72h72z" fill="#BBDEFB"/>
-    <rect x="182" y="196" width="28" height="190" rx="9" fill="#1E88E5"/>
-    <path d="M210 196h38a62 62 0 0 1 0 124h-38" fill="none" stroke="#1E88E5" stroke-width="28" stroke-linejoin="round"/>
-    <circle cx="330" cy="362" r="50" fill="#ffffff" stroke="#FFB300" stroke-width="10"/>
-    <path d="M308 362l16 16 30-34" fill="none" stroke="#FFB300" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+  <!-- Simplified roof icon for PWA maskable -->
+  <path d="M 80 310 L 180 120 L 310 120 L 350 190 L 420 190 L 440 310 L 370 310 L 330 240 L 220 240 L 180 310 Z" fill="#ffffff"/>
 </svg>

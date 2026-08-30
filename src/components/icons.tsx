@@ -3,17 +3,12 @@ import { detectBrandLogo } from "../lib/brand";
 
 type P = { size?: number; className?: string };
 
-/* Встроенный фирменный знак PtoPRO — используется, пока не положен реальный logo.png/logo.svg */
+/* Встроенный фирменный знак PtoPRO — крыша + текст */
 function BuiltinLogo({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" aria-hidden="true" className="shrink-0">
-      <rect width="512" height="512" rx="112" fill="#1E88E5" />
-      <path d="M140 96h156l72 72v248H140z" fill="#ffffff" />
-      <path d="M296 96v72h72z" fill="#BBDEFB" />
-      <rect x="182" y="196" width="28" height="190" rx="9" fill="#1E88E5" />
-      <path d="M210 196h38a62 62 0 0 1 0 124h-38" stroke="#1E88E5" strokeWidth="28" strokeLinejoin="round" />
-      <circle cx="330" cy="362" r="50" fill="#ffffff" stroke="#FFB300" strokeWidth="10" />
-      <path d="M308 362l16 16 30-34" stroke="#FFB300" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 2285 1408" fill="none" aria-hidden="true" className="shrink-0">
+      <path d="M 0 720 L 520 0 L 1140 0 L 1340 310 L 1860 310 L 2285 900 L 1760 900 L 1460 470 L 820 470 L 620 720 Z" fill="#1E88E5"/>
+      <text x="1140" y="1370" textAnchor="middle" fontFamily="'Segoe UI', Arial, sans-serif" fontWeight="700" fontSize="420" fill="#1E88E5" letterSpacing="12">PtoPRO</text>
     </svg>
   );
 }
