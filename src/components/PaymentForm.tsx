@@ -49,8 +49,8 @@ export default function PaymentForm({
   };
 
   return (
-    <Modal title={title} subtitle="платёж" onClose={onClose}>
-      <div className="px-5 py-4">
+    <Modal title={title} subtitle="платёж" onClose={onClose} width="max-w-2xl">
+      <div className="px-1 py-1">
         {info && <div className="mb-4 rounded-lg border border-line bg-soft px-3.5 py-2.5 text-[12.5px] leading-relaxed text-mut">{info}</div>}
 
         <div className="grid gap-3.5">

@@ -10,7 +10,7 @@ function Form({ initial, onSave, onClose }: { initial: Party | null; onSave: (p:
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <Modal title={initial ? "Контрагент" : "Новый контрагент"} subtitle={initial ? "редактирование" : "карточка в базе"} onClose={onClose}>
+    <Modal title={initial ? "Контрагент" : "Новый контрагент"} subtitle={initial ? "редактирование" : "карточка в базе"} onClose={onClose} width="max-w-2xl">
       <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={lbl}>Наименование</label>

@@ -18,7 +18,7 @@ function Form({ parties, onSave, onClose }: { parties: Party[]; onSave: (l: Lett
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <Modal title="Новое письмо" subtitle="входящее или исходящее" onClose={onClose}>
+    <Modal title="Новое письмо" subtitle="входящее или исходящее" onClose={onClose} width="max-w-3xl">
       <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
           <div>
             <label className={lbl}>Номер</label>

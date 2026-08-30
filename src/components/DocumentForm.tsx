@@ -78,10 +78,9 @@ export default function DocumentForm({
       title={initial ? `${TYPE_META[initial.type]?.label ?? "Документ"} № ${initial.number}` : "Новый документ"}
       subtitle={initial ? "редактирование" : `будет присвоен № ${fallbackNumber}`}
       onClose={onClose}
-      width="max-w-3xl"
-      tall
+      width="max-w-4xl"
     >
-      <div className="grid gap-5 px-6 py-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
           {forcedType ? (
             <div>
               <span className={lbl}>Тип документа</span>

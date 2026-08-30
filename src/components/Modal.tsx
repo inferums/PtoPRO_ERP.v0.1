@@ -8,15 +8,13 @@ export default function Modal({
   subtitle,
   onClose,
   children,
-  width = "max-w-md",
-  tall = false,
+  width = "max-w-2xl",
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   width?: string;
-  tall?: boolean;
 }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -26,16 +24,14 @@ export default function Modal({
 
   return (
     <div
-      className="overlay-in fixed inset-0 z-[70] grid place-items-center bg-[#39424e]/55 p-3 sm:p-5"
+      className="overlay-in fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-[#39424e]/55 p-4 sm:p-6"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`modal-in flex w-full ${width} flex-col overflow-hidden rounded-xl bg-surface shadow-[0_45px_100px_-28px_rgba(28,36,50,0.55)] ${
-          tall ? "max-h-[92vh]" : "max-h-[94vh]"
-        }`}
+        className={`modal-in my-8 flex w-full ${width} flex-col rounded-xl bg-surface shadow-[0_45px_100px_-28px_rgba(28,36,50,0.55)]`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
           <div className="min-w-0">
             <h3 className="truncate font-display text-[15px] font-bold text-ink">{title}</h3>
             {subtitle && <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-dim">{subtitle}</p>}
@@ -48,7 +44,7 @@ export default function Modal({
             <IconClose size={15} />
           </button>
         </div>
-        <div className={tall ? "min-h-0 flex-1 overflow-y-auto" : "overflow-y-auto"}>{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
       </div>
     </div>
   );

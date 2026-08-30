@@ -55,9 +55,9 @@ export function ContractForm({
       title={initial ? `Договор ${initial.number}` : "Новый договор"}
       subtitle={initial ? "редактирование" : "доходный или расходный"}
       onClose={onClose}
-      width="max-w-2xl"
+      width="max-w-3xl"
     >
-      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={lbl}>Номер</label>
             <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Д-004/2024" className={inp} />
