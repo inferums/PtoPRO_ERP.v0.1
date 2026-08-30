@@ -698,7 +698,7 @@ export default function App() {
         <span className="shrink-0">{n.icon({ size: 20 })}</span>
         <span
           className={`overflow-hidden transition-all duration-200 ${
-            mobile ? "" : "max-w-[150px] opacity-100"
+            mobile ? "" : "max-w-0 opacity-0 group-hover/side:max-w-[150px] group-hover/side:opacity-100"
           }`}
         >
           {n.label}
@@ -709,11 +709,11 @@ export default function App() {
 
   return (
     <PermissionsProvider ctx={userCtx}>
-    <div className="min-h-screen bg-bg text-ink">
-      {/* сайдбар: фиксированная ширина, иконки + метки всегда видны */}
+    <div className="h-screen bg-bg text-ink">
+      {/* сайдбар: свёрнут до иконок, раскрывается при наведении */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-56 flex-col bg-[#323233] shadow-xl ${
-          mobileMode ? "hidden" : "hidden md:flex"
+        className={`group/side fixed inset-y-0 left-0 z-40 flex-col overflow-hidden bg-[#323233] shadow-xl transition-[width] duration-300 ease-out hover:w-60 ${
+          mobileMode ? "hidden" : "hidden w-[68px] md:flex"
         }`}
       >
         <div className="flex h-full flex-col">
@@ -722,7 +722,7 @@ export default function App() {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-md">
                 <Logo size={36} />
               </div>
-              <span className="whitespace-nowrap text-sm font-semibold text-white">
+              <span className="whitespace-nowrap text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">
                 PtoPRO-ERP
               </span>
             </div>
@@ -731,8 +731,8 @@ export default function App() {
           <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">{NAV.map((n) => navBtn(n))}</nav>
 
           <div className="border-t border-white/10 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs text-white/60">ПК</span>
+            <div className="mb-3 flex items-center justify-center gap-2 group-hover/side:justify-between">
+              <span className="text-xs text-white/60 opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">ПК</span>
               <div className="flex items-center gap-1.5">
                 <IconMonitor size={14} className="text-white/60" />
                 <button
@@ -753,10 +753,10 @@ export default function App() {
                 </button>
                 <IconPhone size={14} className="text-white/60" />
               </div>
-              <span className="text-xs text-white/60">Тел</span>
+              <span className="text-xs text-white/60 opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">Тел</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-sm text-white/70">
+              <span className="min-w-0 flex-1 truncate text-sm text-white/70 opacity-0 transition-opacity duration-200 group-hover/side:opacity-100">
                 {state.own.short}
               </span>
               {installEvt && (
@@ -810,7 +810,7 @@ export default function App() {
       </div>
 
       {/* контент */}
-      <main className={`relative ${mobileMode ? "" : "md:pl-56"}`}>
+      <main className={`relative h-full overflow-y-auto ${mobileMode ? "" : "md:pl-[68px]"}`}>
         <div aria-hidden="true" className="bg-dots pointer-events-none absolute inset-0" />
         <div className="relative">
           <div className="sticky top-0 z-30 hidden border-b border-line bg-bg/95 px-8 py-4 backdrop-blur-sm md:flex md:items-center md:justify-between">
