@@ -106,6 +106,13 @@ export function useBrandLogo(): string | null | undefined {
   return src;
 }
 
+/* Возвращает URL логотипа: localStorage → public/ → null */
+export async function detectBrandLogo(): Promise<string | null> {
+  const stored = getStoredLogo();
+  if (stored) return stored;
+  return detectFileLogo();
+}
+
 /* Вызывается при старте: ставит favicon (загруженный логотип или найденный файл) */
 export function applyBrandFavicon(): void {
   const stored = getStoredLogo();

@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { demoLogin, login, register, type User } from "../lib/auth";
+import { login, register } from "../lib/auth";
 import { Logo } from "./icons";
 
 type Mode = "login" | "register";
 
 const freshCaptcha = () => ({ a: 10 + Math.floor(Math.random() * 60), b: 3 + Math.floor(Math.random() * 30) });
 
-export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDemo: boolean) => void }) {
+export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [orgName, setOrgName] = useState("");
-  const [captcha, setCaptcha] = useState(freshCaptcha);
+  const [captcha, setCaptcha] = useState(freshCaptcha());
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,21 +39,14 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
     }
     setBusy(true);
     setError(null);
-    const res = mode === "login" ? await login(email, password) : await register(email, password, orgName);
-    setBusy(false);
-    if (!res.ok) {
-      fail(res.error);
-      return;
-    }
-    onAuthed(res.user, false);
-  };
 
-  const demo = async () => {
-    if (busy) return;
-    setBusy(true);
-    const res = await demoLogin();
+    const res = mode === "login"
+      ? await login(email, password)
+      : await register(email, password, orgName);
+
     setBusy(false);
-    if (res.ok) onAuthed(res.user, true);
+    if (!res.ok) { fail(res.error); return; }
+    onAuthed();
   };
 
   const inp =
@@ -67,7 +60,6 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
       <div aria-hidden="true" className="absolute -bottom-32 -right-20 h-[28rem] w-[28rem] rounded-full bg-navy/10 blur-3xl" />
 
       <div key={shakeKey} className={`fade-up relative w-full max-w-[420px] ${shakeKey ? "shake" : ""}`}>
-        {/* фирменный верх */}
         <div className="flex items-center gap-3.5 px-1">
           <div className="overflow-hidden rounded-xl shadow-md">
             <Logo size={46} />
@@ -79,7 +71,6 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
         </div>
 
         <div className="mt-5 rounded-xl border border-line bg-surface shadow-[0_30px_70px_-30px_rgba(14,36,60,0.35)]">
-          {/* переключатель режимов */}
           <div className="p-3 pb-0">
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-soft p-1">
               {(["login", "register"] as Mode[]).map((m) => (
@@ -100,8 +91,8 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
           <form onSubmit={submit} className="space-y-4 p-6">
             {mode === "register" && (
               <div>
-                <label className={lbl}>Организация / ФИО</label>
-                <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="ИП Иванов И. И." className={inp} />
+                <label className={lbl}>Наименование организации</label>
+                <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder='ООО "Моя компания"' className={inp} />
               </div>
             )}
             <div>
@@ -128,10 +119,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    setCaptcha(freshCaptcha());
-                    setCaptchaAnswer("");
-                  }}
+                  onClick={() => { setCaptcha(freshCaptcha()); setCaptchaAnswer(""); }}
                   className="cursor-pointer rounded-md border border-line bg-white px-3 py-3 text-[11.5px] font-medium text-mut transition-colors hover:border-brand hover:text-brand"
                   title="Другой пример"
                 >
@@ -151,20 +139,11 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (user: User, seedDe
             >
               {busy ? "проверяем…" : mode === "login" ? "войти" : "создать аккаунт"}
             </button>
-
-            <button
-              type="button"
-              onClick={demo}
-              disabled={busy}
-              className="w-full cursor-pointer rounded-md border border-brand/50 py-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-brand transition-colors hover:bg-brand/10 disabled:opacity-60"
-            >
-              Создать демо-данные
-            </button>
           </form>
         </div>
 
         <p className="mt-5 text-center text-[11px] font-medium uppercase tracking-[0.12em] text-dim">
-          данные хранятся локально в вашем браузере
+          данные хранятся в защищённой облачной базе
         </p>
       </div>
     </div>

@@ -1,10 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  loadState,
-  saveState,
-  seedState,
-  emptyState,
-  hasState,
   nextNumber,
   todayISO,
   uid,
@@ -12,6 +7,8 @@ import {
   suggestPaymentName,
   STATUS_META,
   CONTRACT_STATUS_META,
+  emptyState,
+  seedState,
   type Contract,
   type ContractStatus,
   type Doc,
@@ -23,7 +20,10 @@ import {
   type State,
   type View,
 } from "./lib/store";
-import { clearSession, loadSession, type Session, type User } from "./lib/auth";
+import { clearSession, loadSession, onAuthStateChange, fetchUserContext, type Session } from "./lib/auth";
+import type { UserContext } from "./lib/db-types";
+import { fetchFullState, upsertParty as apiUpsertParty, deleteParty as apiDeleteParty, upsertContract as apiUpsertContract, deleteContract as apiDeleteContract, upsertDocument as apiUpsertDocument, deleteDocument as apiDeleteDocument, upsertPayment as apiUpsertPayment, deletePayment as apiDeletePayment, upsertLetter as apiUpsertLetter, saveOrgDetails, updateOrgProfile, uploadLogo, migrateStateToSupabase } from "./lib/api";
+import { PermissionsProvider, usePermissions } from "./lib/permissions";
 import AuthScreen from "./components/AuthScreen";
 import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
@@ -81,20 +81,33 @@ const TITLES: Record<View, { t: string; s: string }> = {
 
 function SettingsView({
   own,
+  orgName,
+  orgLogoUrl,
+  isAdmin,
   onSave,
   onReset,
   onExport,
   onImport,
+  onOrgNameSave,
+  onLogoUpload,
 }: {
   own: Own;
+  orgName: string;
+  orgLogoUrl: string | null;
+  isAdmin: boolean;
   onSave: (o: Own) => void;
   onReset: () => void;
   onExport: () => void;
   onImport: (f: File) => void;
+  onOrgNameSave: (name: string) => void;
+  onLogoUpload: (file: File) => void;
 }) {
   const [f, setF] = useState({ ...own });
   const [confirmReset, setConfirmReset] = useState(false);
+  const [editingOrgName, setEditingOrgName] = useState(false);
+  const [orgNameDraft, setOrgNameDraft] = useState(orgName);
   const importRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof Own) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
   const inp =
     "w-full rounded-md border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand focus:ring-[3px] focus:ring-brand/15";
@@ -102,6 +115,91 @@ function SettingsView({
 
   return (
     <div className="fade-up grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+      {/* ─── профиль организации ─── */}
+      <div className="rounded-xl border border-line bg-surface p-6 shadow-sm md:p-7">
+        <h3 className="font-display text-[15px] font-bold text-ink">Профиль организации</h3>
+        <p className="mt-1 text-[12.5px] text-mut">Название и логотип — отображаются в интерфейсе и документах</p>
+
+        <div className="mt-5 flex items-start gap-5">
+          {/* логотип */}
+          <div className="flex shrink-0 flex-col items-center gap-2">
+            <div className="flex size-16 items-center justify-center overflow-hidden rounded-xl border border-line bg-soft">
+              {orgLogoUrl ? (
+                <img src={orgLogoUrl} alt="Логотип" className="size-full object-contain" />
+              ) : (
+                <span className="font-mono text-[10px] text-dim">нет</span>
+              )}
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => logoRef.current?.click()}
+                className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.1em] text-brand hover:underline"
+              >
+                загрузить
+              </button>
+            )}
+            <input
+              ref={logoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && isAdmin) onLogoUpload(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {/* название */}
+          <div className="min-w-0 flex-1">
+            <label className={lbl}>Наименование</label>
+            {editingOrgName ? (
+              <div className="flex gap-2">
+                <input
+                  value={orgNameDraft}
+                  onChange={(e) => setOrgNameDraft(e.target.value)}
+                  className={inp}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => { onOrgNameSave(orgNameDraft); setEditingOrgName(false); }}
+                  className="shrink-0 cursor-pointer bg-brand px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-white hover:bg-brand2"
+                >
+                  сохранить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingOrgName(false); setOrgNameDraft(orgName); }}
+                  className="shrink-0 cursor-pointer border border-line px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-mut hover:text-ink"
+                >
+                  отмена
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[14px] font-semibold text-ink">{orgName || "—"}</span>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditingOrgName(true); setOrgNameDraft(orgName); }}
+                    className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.1em] text-brand hover:underline"
+                  >
+                    изменить
+                  </button>
+                )}
+              </div>
+            )}
+            <p className="mt-2 text-[11.5px] text-dim">
+              Роль: <span className="font-semibold text-ink">{isAdmin ? "Администратор" : "Пользователь"}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── реквизиты ─── */}
       <div className="rounded-xl border border-line bg-surface p-6 shadow-sm md:p-7">
         <h3 className="font-display text-[15px] font-bold text-ink">Реквизиты поставщика</h3>
         <p className="mt-1 text-[12.5px] text-mut">Эти данные попадают в шапку и колонтитул каждого счёта, акта и договора</p>
@@ -157,32 +255,33 @@ function SettingsView({
           </div>
         </div>
 
-        <button
-          onClick={() => onSave(f)}
-          className="mt-6 cursor-pointer bg-brand px-6 py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition-all hover:bg-brand2 hover:shadow-[0_8px_24px_-8px_rgba(30,136,229,0.6)]"
-        >
-          сохранить реквизиты
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => onSave(f)}
+            className="mt-6 cursor-pointer bg-brand px-6 py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition-all hover:bg-brand2 hover:shadow-[0_8px_24px_-8px_rgba(30,136,229,0.6)]"
+          >
+            сохранить реквизиты
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
           <h3 className="font-display text-[14px] font-bold text-ink">Где живут данные</h3>
           <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
-            Всё хранится <span className="font-semibold text-ink">локально в браузере</span> (localStorage) и
-            доступно офлайн через service worker. Сервер не нужен — это и есть preview-режим.
+            Данные хранятся в <span className="font-semibold text-ink">облачной базе Supabase</span> и
+            синхронизируются в реальном времени. Доступны с любого устройства после входа.
           </p>
           <p className="mt-3 text-[13px] leading-relaxed text-mut">
-            Для переноса на свой сервер достаточно залить собранную папку{" "}
-            <span className="font-mono text-[12px] text-brand">dist/</span> — приложение полностью статическое.
+            Организация: <span className="font-semibold text-ink">{orgName || "—"}</span>
           </p>
         </div>
 
+        {isAdmin && (
         <div className="border border-line bg-surface p-6">
           <h3 className="font-display text-[14px] font-bold text-ink">Резервные копии</h3>
           <p className="mt-2.5 text-[13px] leading-relaxed text-mut">
-            Вся база выгружается одним JSON-файлом — переносите между браузерами и устройствами,
-            пока данные живут в localStorage.
+            Вся база выгружается одним JSON-файлом — переносите между браузерами и устройствами.
           </p>
           <div className="mt-4 flex flex-wrap gap-2.5">
             <button
@@ -210,6 +309,7 @@ function SettingsView({
             />
           </div>
         </div>
+        )}
 
         <div className="rounded-xl border border-line bg-surface p-6 shadow-sm">
           <h3 className="font-display text-[14px] font-bold text-ink">PWA-установка</h3>
@@ -219,6 +319,7 @@ function SettingsView({
           </p>
         </div>
 
+        {isAdmin && (
         <div className="rounded-xl border border-danger/30 bg-surface p-6 shadow-sm">
           <h3 className="font-display text-[14px] font-bold text-danger">Сброс</h3>
           <p className="mt-2 text-[12.5px] leading-relaxed text-mut">Вернуть демо-данные, удалив все свои изменения.</p>
@@ -246,6 +347,7 @@ function SettingsView({
             </button>
           )}
         </div>
+        )}
       </div>
     </div>
   );
@@ -254,11 +356,10 @@ function SettingsView({
 /* ---------- приложение ---------- */
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(loadSession);
-  const [state, setState] = useState<State>(() => {
-    const s = loadSession();
-    return s ? loadState(s.userId) : emptyState();
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [userCtx, setUserCtx] = useState<UserContext | null>(null);
+  const [state, setState] = useState<State>(emptyState);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("dashboard");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [contractId, setContractId] = useState<string | null>(null);
@@ -267,47 +368,77 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
   const [mobileMode, setMobileMode] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("ip-dok-v2:mobileui") === "1";
-    } catch {
-      return false;
-    }
+    try { return localStorage.getItem("ip-dok-v2:mobileui") === "1"; } catch { return false; }
   });
 
   const toggleMobileMode = () => {
     setMobileMode((m) => {
       const next = !m;
-      try {
-        localStorage.setItem("ip-dok-v2:mobileui", next ? "1" : "0");
-      } catch {
-        /* приватный режим */
-      }
+      try { localStorage.setItem("ip-dok-v2:mobileui", next ? "1" : "0"); } catch { /* incognito */ }
       return next;
     });
   };
 
-  useEffect(() => {
-    if (session) saveState(state, session.userId);
-  }, [state, session]);
-
-  const toast = (text: string, tone: "ok" | "err" = "ok") => {
+  const toast = useCallback((text: string, tone: "ok" | "err" = "ok") => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, text, tone }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
-  };
+  }, []);
 
-  const handleAuthed = (user: User, seed: boolean) => {
-    if (seed) saveState(seedState(), user.id);
-    else if (!hasState(user.id)) saveState(emptyState(), user.id);
-    setSession({ userId: user.id, email: user.email });
-    setState(loadState(user.id));
+  /* загрузка данных из Supabase */
+  const loadData = useCallback(async (orgId: string) => {
+    try {
+      const data = await fetchFullState(orgId);
+      setState(data);
+    } catch (e) {
+      console.error("Failed to load data:", e);
+      toast("Не удалось загрузить данные из облака", "err");
+    }
+  }, [toast]);
+
+  /* инициализация сессии */
+  useEffect(() => {
+    loadSession().then(async (s) => {
+      if (s) {
+        setSession(s);
+        const ctx = await fetchUserContext();
+        setUserCtx(ctx);
+        if (ctx) await loadData(ctx.orgId);
+      }
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = onAuthStateChange(async (s) => {
+      if (!s) {
+        setSession(null);
+        setUserCtx(null);
+        setState(emptyState());
+        setPreviewId(null);
+        setContractId(null);
+        setEditing(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [loadData]);
+
+  const handleAuthed = async () => {
+    const s = await loadSession();
+    if (!s) return;
+    setSession(s);
+    const ctx = await fetchUserContext();
+    setUserCtx(ctx);
+    if (ctx) {
+      await loadData(ctx.orgId);
+      toast(`Добро пожаловать, ${ctx.fullName || ctx.email}`);
+    }
     setView("dashboard");
-    toast(seed ? "Демо-данные созданы — осматривайтесь" : `Добро пожаловать, ${user.name}`);
   };
 
   const logout = () => {
     clearSession();
     setSession(null);
+    setUserCtx(null);
     setPreviewId(null);
     setContractId(null);
     setEditing(null);
@@ -317,58 +448,43 @@ export default function App() {
     if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
-    const h = (e: Event) => {
-      e.preventDefault();
-      setInstallEvt(e as BIPEvent);
-    };
+    const h = (e: Event) => { e.preventDefault(); setInstallEvt(e as BIPEvent); };
     window.addEventListener("beforeinstallprompt", h);
     return () => window.removeEventListener("beforeinstallprompt", h);
   }, []);
+
+  const orgId = userCtx?.orgId ?? "";
 
   const setStatus = (id: string, s: DocStatus) => {
     const doc = state.docs.find((d) => d.id === id);
     if (!doc) return;
 
-    /* «Оплачен»: автоматически создаём платёж на недоплаченную сумму счёта */
     if (s === "paid") {
       const total = doc.items.reduce((sm, it) => sm + it.qty * it.price, 0);
       const paidSum = state.payments.filter((p) => p.docId === id).reduce((sm, p) => sm + p.amount, 0);
       const rest = Math.max(total - paidSum, 0);
       const contract = state.contracts.find((c) => c.id === doc.contractId);
       const autoName = suggestPaymentName(doc, contract);
+      const autoPayment = rest > 0 ? { id: uid(), docId: id, date: todayISO(), amount: rest, method: "Банковский перевод", name: autoName } : null;
+
       setState((st) => ({
         ...st,
-        payments:
-          rest > 0
-            ? [
-                ...st.payments,
-                {
-                  id: uid(),
-                  docId: id,
-                  date: todayISO(),
-                  amount: rest,
-                  method: "Банковский перевод",
-                  name: autoName,
-                },
-              ]
-            : st.payments,
+        payments: autoPayment ? [...st.payments, autoPayment] : st.payments,
         docs: st.docs.map((d) => (d.id === id ? { ...d, status: s } : d)),
       }));
-      toast(
-        rest > 0
-          ? `№ ${doc.number} оплачен — платёж на ${rest.toLocaleString("ru-RU")} ₽ создан автоматически`
-          : `№ ${doc.number}: «Оплачен»`
-      );
+
+      /* sync to Supabase */
+      apiUpsertDocument(orgId, { ...doc, status: s }).catch(() => {});
+      if (autoPayment) apiUpsertPayment(orgId, autoPayment).catch(() => {});
+
+      toast(rest > 0 ? `№ ${doc.number} оплачен — платёж на ${rest.toLocaleString("ru-RU")} ₽ создан автоматически` : `№ ${doc.number}: «Оплачен»`);
       return;
     }
 
-    /* «Частично оплачен»: сначала запрашиваем сумму платежа */
-    if (s === "paid_partial") {
-      setPartialFor(doc);
-      return;
-    }
+    if (s === "paid_partial") { setPartialFor(doc); return; }
 
     setState((st) => ({ ...st, docs: st.docs.map((d) => (d.id === id ? { ...d, status: s } : d)) }));
+    apiUpsertDocument(orgId, { ...doc, status: s }).catch(() => {});
     toast(`№ ${doc.number}: «${STATUS_META[s].label}»`);
   };
 
@@ -379,6 +495,7 @@ export default function App() {
     });
     setEditing(null);
     setPreviewId(doc.id);
+    apiUpsertDocument(orgId, doc).catch(() => toast("Ошибка сохранения в облако", "err"));
     toast(`Документ № ${doc.number} сохранён`);
   };
 
@@ -387,16 +504,15 @@ export default function App() {
       const exists = st.parties.some((x) => x.id === p.id);
       return { ...st, parties: exists ? st.parties.map((x) => (x.id === p.id ? p : x)) : [...st.parties, p] };
     });
+    apiUpsertParty(orgId, p).catch(() => toast("Ошибка сохранения", "err"));
     toast(`Контрагент «${p.name}» сохранён`);
   };
 
   const deleteParty = (id: string) => {
-    if (state.docs.some((d) => d.counterpartyId === id)) {
-      toast("Нельзя удалить: по контрагенту есть документы", "err");
-      return;
-    }
+    if (state.docs.some((d) => d.counterpartyId === id)) { toast("Нельзя удалить: по контрагенту есть документы", "err"); return; }
     const p = state.parties.find((x) => x.id === id);
     setState((st) => ({ ...st, parties: st.parties.filter((x) => x.id !== id) }));
+    apiDeleteParty(id).catch(() => toast("Ошибка удаления", "err"));
     if (p) toast(`«${p.name}» удалён из базы`);
   };
 
@@ -405,22 +521,22 @@ export default function App() {
       const exists = st.contracts.some((x) => x.id === c.id);
       return { ...st, contracts: exists ? st.contracts.map((x) => (x.id === c.id ? c : x)) : [...st.contracts, c] };
     });
+    apiUpsertContract(orgId, c).catch(() => toast("Ошибка сохранения", "err"));
     toast(`Договор № ${c.number} сохранён`);
   };
 
   const setContractStatus = (id: string, s: ContractStatus) => {
     const c = state.contracts.find((x) => x.id === id);
     setState((st) => ({ ...st, contracts: st.contracts.map((x) => (x.id === id ? { ...x, status: s } : x)) }));
+    if (c) apiUpsertContract(orgId, { ...c, status: s }).catch(() => {});
     if (c) toast(`Договор № ${c.number}: «${CONTRACT_STATUS_META[s].label}»`);
   };
 
   const deleteContract = (id: string) => {
-    if (state.docs.some((d) => d.contractId === id)) {
-      toast("Нельзя удалить: к договору привязаны документы", "err");
-      return;
-    }
+    if (state.docs.some((d) => d.contractId === id)) { toast("Нельзя удалить: к договору привязаны документы", "err"); return; }
     const c = state.contracts.find((x) => x.id === id);
     setState((st) => ({ ...st, contracts: st.contracts.filter((x) => x.id !== id) }));
+    apiDeleteContract(id).catch(() => toast("Ошибка удаления", "err"));
     if (c) toast(`Договор № ${c.number} удалён`);
   };
 
@@ -430,29 +546,24 @@ export default function App() {
       const docTotal = doc ? doc.items.reduce((s, it) => s + it.qty * it.price, 0) : Infinity;
       const alreadyPaid = st.payments.filter((x) => x.docId === p.docId).reduce((s, x) => s + x.amount, 0);
       const newSum = alreadyPaid + p.amount;
-      /* статус следует за деньгами: покрыто всё — «Оплачен», часть — «Частично оплачен» */
       const docs = doc
-        ? st.docs.map((d) =>
-            d.id === p.docId
-              ? {
-                  ...d,
-                  status: (newSum >= docTotal ? "paid" : newSum > 0 && d.status !== "paid" ? "paid_partial" : d.status) as DocStatus,
-                }
-              : d
-          )
+        ? st.docs.map((d) => d.id === p.docId ? { ...d, status: (newSum >= docTotal ? "paid" : newSum > 0 && d.status !== "paid" ? "paid_partial" : d.status) as DocStatus } : d)
         : st.docs;
       return { ...st, payments: [...st.payments, p], docs };
     });
+    apiUpsertPayment(orgId, p).catch(() => toast("Ошибка сохранения оплаты", "err"));
     toast(`Оплата ${p.amount.toLocaleString("ru-RU")} ₽ записана`);
   };
 
   const updatePayment = (p: Payment) => {
     setState((st) => ({ ...st, payments: st.payments.map((x) => (x.id === p.id ? p : x)) }));
+    apiUpsertPayment(orgId, p).catch(() => {});
     toast("Оплата обновлена");
   };
 
   const deletePayment = (id: string) => {
     setState((st) => ({ ...st, payments: st.payments.filter((x) => x.id !== id) }));
+    apiDeletePayment(id).catch(() => {});
     toast("Оплата удалена");
   };
 
@@ -465,6 +576,7 @@ export default function App() {
 
   const addLetter = (l: Letter) => {
     setState((st) => ({ ...st, letters: [...st.letters, l] }));
+    apiUpsertLetter(orgId, l).catch(() => toast("Ошибка сохранения письма", "err"));
     toast(`Письмо «${l.subject}» сохранено`);
   };
 
@@ -485,19 +597,26 @@ export default function App() {
   const importBackup = (file: File) => {
     file
       .text()
-      .then((text) => {
+      .then(async (text) => {
         const parsed = JSON.parse(text) as Partial<State>;
         if (!Array.isArray(parsed.docs) || !Array.isArray(parsed.parties) || !parsed.own) {
           throw new Error("bad shape");
         }
-        setState({
+        const imported: State = {
           docs: parsed.docs.filter((d) => d && (d.type === "invoice" || d.type === "act")),
           parties: parsed.parties,
           contracts: Array.isArray(parsed.contracts) ? parsed.contracts : [],
           payments: Array.isArray(parsed.payments) ? parsed.payments : [],
           letters: Array.isArray(parsed.letters) ? parsed.letters : [],
           own: { ...emptyState().own, ...parsed.own },
-        });
+        };
+        setState(imported);
+        /* sync to Supabase */
+        if (orgId) {
+          try {
+            await migrateStateToSupabase(orgId, imported);
+          } catch { toast("Импорт в локальное состояние OK, но ошибка загрузки в облако", "err"); }
+        }
         toast(`Импортировано: ${parsed.docs.length} документов, ${parsed.parties.length} контрагентов`);
       })
       .catch(() => toast("Файл не похож на резервную копию — импорт отменён", "err"));
@@ -514,6 +633,21 @@ export default function App() {
   const previewDoc = previewId ? state.docs.find((d) => d.id === previewId) ?? null : null;
   const previewContract = contractId ? state.contracts.find((c) => c.id === contractId) ?? null : null;
   const title = TITLES[view];
+
+  /* загрузка сессии */
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg">
+        <div className="flex flex-col items-center gap-4">
+          <Logo size={48} />
+          <div className="h-1 w-32 overflow-hidden rounded-full bg-line">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-brand" />
+          </div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-dim">загрузка…</p>
+        </div>
+      </div>
+    );
+  }
 
   /* без сессии — только вход в систему */
   if (!session) {
@@ -574,6 +708,7 @@ export default function App() {
   };
 
   return (
+    <PermissionsProvider ctx={userCtx}>
     <div className="min-h-screen bg-bg text-ink">
       {/* сайдбар: свёрнут до иконок, раскрывается при наведении */}
       <aside
@@ -780,12 +915,29 @@ export default function App() {
             {view === "settings" && (
               <SettingsView
                 own={state.own}
+                orgName={userCtx?.orgName ?? ""}
+                orgLogoUrl={userCtx?.orgLogoUrl ?? null}
+                isAdmin={userCtx?.role === "admin"}
                 onSave={(o) => {
                   setState((st) => ({ ...st, own: o }));
+                  saveOrgDetails(orgId, o).catch(() => toast("Ошибка сохранения реквизитов", "err"));
                   toast("Реквизиты сохранены");
+                }}
+                onOrgNameSave={(name) => {
+                  setUserCtx((ctx) => ctx ? { ...ctx, orgName: name } : ctx);
+                  updateOrgProfile(orgId, { name, short_name: name }).catch(() => toast("Ошибка сохранения", "err"));
+                  toast("Название организации обновлено");
+                }}
+                onLogoUpload={async (file) => {
+                  try {
+                    const url = await uploadLogo(orgId, file);
+                    setUserCtx((ctx) => ctx ? { ...ctx, orgLogoUrl: url } : ctx);
+                    toast("Логотип загружен");
+                  } catch { toast("Ошибка загрузки логотипа", "err"); }
                 }}
                 onReset={() => {
                   setState(seedState());
+                  if (orgId) migrateStateToSupabase(orgId, seedState()).catch(() => {});
                   toast("Демо-данные восстановлены");
                 }}
                 onExport={exportBackup}
@@ -883,5 +1035,6 @@ export default function App() {
         ))}
       </div>
     </div>
+    </PermissionsProvider>
   );
 }
