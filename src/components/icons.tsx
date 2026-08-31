@@ -3,15 +3,15 @@ import { detectBrandLogo } from "../lib/brand";
 
 type P = { size?: number; className?: string };
 
-/* Встроенный фирменный знак PtoPRO — реальный логотип компании */
+/* Встроенный фирменный знак PtoPRO — квадратная иконка */
 function BuiltinLogo({ size }: { size: number }) {
   return (
     <img
-      src="/logo.png"
+      src="/icon-maskable.svg"
       width={size}
       height={size}
       alt="PtoPRO"
-      className="shrink-0 object-contain"
+      className="shrink-0"
       style={{ width: size, height: size }}
     />
   );

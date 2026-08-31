@@ -66,7 +66,7 @@ function detectFileLogo(): Promise<string | null> {
   if (fileLogo !== undefined) return Promise.resolve(fileLogo);
   if (filePending) return filePending;
   filePending = (async () => {
-    for (const candidate of ["/logo.png", "/logo.svg"]) {
+    for (const candidate of ["/icon-maskable.svg", "/logo.png", "/logo.svg"]) {
       if (await probe(candidate)) {
         fileLogo = candidate;
         return fileLogo;
