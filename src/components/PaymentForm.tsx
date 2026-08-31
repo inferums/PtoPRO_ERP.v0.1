@@ -110,7 +110,7 @@ export default function PaymentForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
+      <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
         <button onClick={onClose} className={BTN_GHOST}>отмена</button>
         <button
           onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, date, amount, method, name: name.trim() || "Оплата" })}

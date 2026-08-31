@@ -19,50 +19,51 @@ function Form({ parties, onSave, onClose }: { parties: Party[]; onSave: (l: Lett
 
   return (
     <Modal title="Новое письмо" subtitle="входящее или исходящее" onClose={onClose} width="max-w-3xl">
-      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
-          <div>
-            <label className={lbl}>Номер</label>
-            <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="исх-32" className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Дата</label>
-            <input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Направление</label>
-            <select value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value as Letter["direction"] })} className={`${inp} cursor-pointer`}>
-              <option value="out">Исходящее</option>
-              <option value="in">Входящее</option>
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Контрагент</label>
-            <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer`}>
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Тема</label>
-            <input value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} placeholder="О сроках подачи заявки" className={inp} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Текст</label>
-            <textarea value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} rows={5} className={`${inp} resize-none`} />
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className={lbl}>Номер</label>
+          <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="исх-32" className={inp} />
         </div>
-        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
-          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
-            отмена
-          </button>
-          <button
-            onClick={() => f.subject.trim() && onSave(f)}
-            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-          >
-            сохранить
-          </button>
+        <div>
+          <label className={lbl}>Дата</label>
+          <input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} className={inp} />
         </div>
+        <div>
+          <label className={lbl}>Направление</label>
+          <select value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value as Letter["direction"] })} className={`${inp} cursor-pointer`}>
+            <option value="out">Исходящее</option>
+            <option value="in">Входящее</option>
+          </select>
+        </div>
+        <div>
+          <label className={lbl}>Контрагент</label>
+          <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer`}>
+            {parties.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Тема</label>
+          <input value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} placeholder="О сроках подачи заявки" className={inp} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Текст</label>
+          <textarea value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} rows={5} className={`${inp} resize-none`} />
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
+        <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
+          отмена
+        </button>
+        <button
+          onClick={() => f.subject.trim() && onSave(f)}
+          className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+        >
+          сохранить
+        </button>
+      </div>
     </Modal>
   );
 }

@@ -11,43 +11,44 @@ export function CounterpartyForm({ initial, onSave, onClose }: { initial: Party 
 
   return (
     <Modal title={initial ? "Контрагент" : "Новый контрагент"} subtitle={initial ? "редактирование" : "карточка в базе"} onClose={onClose} width="max-w-2xl">
-      <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={lbl}>Наименование</label>
-            <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ООО «Ромашка»" className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>ИНН</label>
-            <input value={f.inn ?? ""} onChange={(e) => setF({ ...f, inn: e.target.value })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Контактное лицо</label>
-            <input value={f.person ?? ""} onChange={(e) => setF({ ...f, person: e.target.value })} className={inp} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Банк</label>
-            <input value={f.bank ?? ""} onChange={(e) => setF({ ...f, bank: e.target.value })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>БИК</label>
-            <input value={f.bik ?? ""} onChange={(e) => setF({ ...f, bik: e.target.value })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Расчётный счёт</label>
-            <input value={f.account ?? ""} onChange={(e) => setF({ ...f, account: e.target.value })} className={inp} />
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className={lbl}>Наименование</label>
+          <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ООО «Ромашка»" className={inp} />
         </div>
-        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
-          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
-            отмена
-          </button>
-          <button
-            onClick={() => f.name.trim() && onSave({ ...f, name: f.name.trim() })}
-            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-          >
-            сохранить
-          </button>
+        <div>
+          <label className={lbl}>ИНН</label>
+          <input value={f.inn ?? ""} onChange={(e) => setF({ ...f, inn: e.target.value })} className={inp} />
         </div>
+        <div>
+          <label className={lbl}>Контактное лицо</label>
+          <input value={f.person ?? ""} onChange={(e) => setF({ ...f, person: e.target.value })} className={inp} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Банк</label>
+          <input value={f.bank ?? ""} onChange={(e) => setF({ ...f, bank: e.target.value })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>БИК</label>
+          <input value={f.bik ?? ""} onChange={(e) => setF({ ...f, bik: e.target.value })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Расчётный счёт</label>
+          <input value={f.account ?? ""} onChange={(e) => setF({ ...f, account: e.target.value })} className={inp} />
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
+        <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
+          отмена
+        </button>
+        <button
+          onClick={() => f.name.trim() && onSave({ ...f, name: f.name.trim() })}
+          className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+        >
+          сохранить
+        </button>
+      </div>
     </Modal>
   );
 }

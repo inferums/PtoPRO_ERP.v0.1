@@ -60,89 +60,90 @@ export function ContractForm({
       width="max-w-3xl"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={lbl}>Номер</label>
-            <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Д-004/2024" className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Контрагент</label>
-            <div className="flex gap-1.5">
-              <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer flex-1`}>
-                {parties.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              {onCreateCounterparty && (
-                <button type="button" onClick={onCreateCounterparty} title="Создать контрагента" className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-white px-3 text-brand transition-colors hover:border-brand hover:bg-brand hover:text-white">
-                  <IconPlus size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Предмет договора</label>
-            <input value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} placeholder="Техническая поддержка" className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Тип</label>
-            <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ContractKind })} className={`${inp} cursor-pointer`}>
-              <option value="income">Доход</option>
-              <option value="expense">Расход</option>
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Статус</label>
-            <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as ContractStatus })} className={`${inp} cursor-pointer`}>
-              {CONTRACT_STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>{CONTRACT_STATUS_META[s].label}</option>
+        <div>
+          <label className={lbl}>Номер</label>
+          <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Д-004/2024" className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Контрагент</label>
+          <div className="flex gap-1.5">
+            <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer flex-1`}>
+              {parties.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className={lbl}>Плановый доход, ₽</label>
-            <input type="number" min={0} value={f.plannedIncome || ""} onChange={(e) => setF({ ...f, plannedIncome: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Плановый расход, ₽</label>
-            <input type="number" min={0} value={f.plannedExpense || ""} onChange={(e) => setF({ ...f, plannedExpense: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Фактический доход, ₽</label>
-            <input type="number" min={0} value={f.actualIncome || ""} onChange={(e) => setF({ ...f, actualIncome: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Фактический расход, ₽</label>
-            <input type="number" min={0} value={f.actualExpense || ""} onChange={(e) => setF({ ...f, actualExpense: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Начало</label>
-            <input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Окончание</label>
-            <input type="date" value={f.endDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} className={inp} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Родительский договор (для субподряда)</label>
-            <select value={f.parentId ?? ""} onChange={(e) => setF({ ...f, parentId: e.target.value || undefined })} className={`${inp} cursor-pointer`}>
-              <option value="">— нет (самостоятельный) —</option>
-              {parents.map((p) => (
-                <option key={p.id} value={p.id}>{p.number}</option>
-              ))}
-            </select>
+            {onCreateCounterparty && (
+              <button type="button" onClick={onCreateCounterparty} title="Создать контрагента" className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-white px-3 text-brand transition-colors hover:border-brand hover:bg-brand hover:text-white">
+                <IconPlus size={14} />
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
-          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
-            отмена
-          </button>
-          <button
-            onClick={() => f.number.trim() && onSave(f)}
-            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-          >
-            сохранить
-          </button>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Предмет договора</label>
+          <input value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} placeholder="Техническая поддержка" className={inp} />
         </div>
+        <div>
+          <label className={lbl}>Тип</label>
+          <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ContractKind })} className={`${inp} cursor-pointer`}>
+            <option value="income">Доход</option>
+            <option value="expense">Расход</option>
+          </select>
+        </div>
+        <div>
+          <label className={lbl}>Статус</label>
+          <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as ContractStatus })} className={`${inp} cursor-pointer`}>
+            {CONTRACT_STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>{CONTRACT_STATUS_META[s].label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={lbl}>Плановый доход, ₽</label>
+          <input type="number" min={0} value={f.plannedIncome || ""} onChange={(e) => setF({ ...f, plannedIncome: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Плановый расход, ₽</label>
+          <input type="number" min={0} value={f.plannedExpense || ""} onChange={(e) => setF({ ...f, plannedExpense: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Фактический доход, ₽</label>
+          <input type="number" min={0} value={f.actualIncome || ""} onChange={(e) => setF({ ...f, actualIncome: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Фактический расход, ₽</label>
+          <input type="number" min={0} value={f.actualExpense || ""} onChange={(e) => setF({ ...f, actualExpense: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Начало</label>
+          <input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Окончание</label>
+          <input type="date" value={f.endDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} className={inp} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Родительский договор (для субподряда)</label>
+          <select value={f.parentId ?? ""} onChange={(e) => setF({ ...f, parentId: e.target.value || undefined })} className={`${inp} cursor-pointer`}>
+            <option value="">— нет (самостоятельный) —</option>
+            {parents.map((p) => (
+              <option key={p.id} value={p.id}>{p.number}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
+        <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
+          отмена
+        </button>
+        <button
+          onClick={() => f.number.trim() && onSave(f)}
+          className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+        >
+          сохранить
+        </button>
+      </div>
     </Modal>
   );
 }
