@@ -24,14 +24,16 @@ export default function Modal({
 
   return (
     <div
-      className="overlay-in fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-[#39424e]/55 p-4 sm:p-6"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-[#39424e]/55 p-4 sm:p-6"
+      style={{ overflow: 'auto' }}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`modal-in my-8 flex w-full ${width} flex-col rounded-xl bg-surface shadow-[0_45px_100px_-28px_rgba(28,36,50,0.55)]`}
+        className={`modal-in my-8 w-full ${width} flex-col rounded-xl bg-surface shadow-[0_45px_100px_-28px_rgba(28,36,50,0.55)]`}
+        style={{ display: 'flex', maxHeight: 'calc(100vh - 4rem)' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-6 py-4">
           <div className="min-w-0">
             <h3 className="truncate font-display text-[15px] font-bold text-ink">{title}</h3>
             {subtitle && <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-dim">{subtitle}</p>}
