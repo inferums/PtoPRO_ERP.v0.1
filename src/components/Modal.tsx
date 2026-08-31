@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { IconClose } from "./icons";
 
 /* Единое модальное окно: скруглённая карточка, серый затемнённый фон,
@@ -22,7 +23,7 @@ export default function Modal({
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-[#39424e]/55 p-4 sm:p-6"
       style={{ overflow: 'auto' }}
@@ -48,7 +49,8 @@ export default function Modal({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
