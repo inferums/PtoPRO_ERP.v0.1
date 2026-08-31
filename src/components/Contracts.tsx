@@ -15,7 +15,7 @@ import {
   type Party,
 } from "../lib/store";
 import Modal from "./Modal";
-import { IconContract } from "./icons";
+import { IconContract, IconPlus } from "./icons";
 
 export function ContractForm({
   initial,
@@ -23,12 +23,14 @@ export function ContractForm({
   parents,
   onSave,
   onClose,
+  onCreateCounterparty,
 }: {
   initial: Contract | null;
   parties: Party[];
   parents: { id: string; number: string }[];
   onSave: (c: Contract) => void;
   onClose: () => void;
+  onCreateCounterparty?: () => void;
 }) {
   const [f, setF] = useState<Contract>(
     initial ?? {
@@ -64,11 +66,18 @@ export function ContractForm({
           </div>
           <div>
             <label className={lbl}>Контрагент</label>
-            <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer`}>
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-1.5">
+              <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer flex-1`}>
+                {parties.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {onCreateCounterparty && (
+                <button type="button" onClick={onCreateCounterparty} title="Создать контрагента" className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-white px-3 text-brand transition-colors hover:border-brand hover:bg-brand hover:text-white">
+                  <IconPlus size={14} />
+                </button>
+              )}
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className={lbl}>Предмет договора</label>
@@ -148,6 +157,7 @@ export default function Contracts({
   onUpsert,
   onDelete,
   onOpen,
+  onCreateCounterparty,
 }: {
   contracts: Contract[];
   parties: Party[];
@@ -155,6 +165,7 @@ export default function Contracts({
   onUpsert: (c: Contract) => void;
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
+  onCreateCounterparty?: () => void;
 }) {
   const [editing, setEditing] = useState<Contract | null | "new">(null);
   const [q, setQ] = useState("");
@@ -327,6 +338,7 @@ export default function Contracts({
           parents={contracts.filter((c) => !c.parentId && c.id !== (editing === "new" ? "" : editing?.id)).map((c) => ({ id: c.id, number: c.number }))}
           onSave={(c) => { onUpsert(c); setEditing(null); }}
           onClose={() => setEditing(null)}
+          onCreateCounterparty={onCreateCounterparty}
         />
       )}
     </div>

@@ -29,12 +29,12 @@ import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
 import DocumentForm from "./components/DocumentForm";
 import DocumentPreview from "./components/DocumentPreview";
-import Contracts from "./components/Contracts";
+import Contracts, { ContractForm } from "./components/Contracts";
 import ContractDetail from "./components/ContractDetail";
 import Finance from "./components/Finance";
 import PaymentForm from "./components/PaymentForm";
 import Letters from "./components/Letters";
-import Counterparties from "./components/Counterparties";
+import Counterparties, { CounterpartyForm } from "./components/Counterparties";
 import {
   Logo,
   IconGrid,
@@ -365,6 +365,8 @@ export default function App() {
   const [contractId, setContractId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Doc | null | "new">(null);
   const [partialFor, setPartialFor] = useState<Doc | null>(null);
+  const [quickParty, setQuickParty] = useState<(() => void) | null>(null);
+  const [quickContract, setQuickContract] = useState<(() => void) | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
   const [mobileMode, setMobileMode] = useState<boolean>(() => {
@@ -506,6 +508,7 @@ export default function App() {
     });
     apiUpsertParty(orgId, p).catch(() => toast("Ошибка сохранения", "err"));
     toast(`Контрагент «${p.name}» сохранён`);
+    setQuickParty(null);
   };
 
   const deleteParty = (id: string) => {
@@ -523,6 +526,7 @@ export default function App() {
     });
     apiUpsertContract(orgId, c).catch(() => toast("Ошибка сохранения", "err"));
     toast(`Договор № ${c.number} сохранён`);
+    setQuickContract(null);
   };
 
   const setContractStatus = (id: string, s: ContractStatus) => {
@@ -894,6 +898,7 @@ export default function App() {
                 onUpsert={upsertContract}
                 onDelete={deleteContract}
                 onOpen={(id) => setContractId(id)}
+                onCreateCounterparty={() => setQuickParty(() => {})}
               />
             )}
             {view === "finance" && (
@@ -993,6 +998,28 @@ export default function App() {
           forcedType={view === "acts" ? "act" : view === "invoices" ? "invoice" : undefined}
           onSave={saveDoc}
           onClose={() => setEditing(null)}
+          onCreateCounterparty={() => setQuickParty(() => {})}
+          onCreateContract={() => setQuickContract(() => {})}
+        />
+      )}
+
+      {/* быстрое создание контрагента из формы */}
+      {quickParty !== null && (
+        <CounterpartyForm
+          initial={null}
+          onSave={(p) => upsertParty(p)}
+          onClose={() => setQuickParty(null)}
+        />
+      )}
+
+      {/* быстрое создание договора из формы */}
+      {quickContract !== null && (
+        <ContractForm
+          initial={null}
+          parties={state.parties}
+          parents={state.contracts.filter((c) => !c.parentId).map((c) => ({ id: c.id, number: c.number }))}
+          onSave={(c) => upsertContract(c)}
+          onClose={() => setQuickContract(null)}
         />
       )}
 

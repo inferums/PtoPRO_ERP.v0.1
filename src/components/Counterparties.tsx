@@ -3,7 +3,7 @@ import { calc, fmtMoney, uid, type Doc, type Party } from "../lib/store";
 import Modal from "./Modal";
 import { IconPencil, IconPeople, IconPlus, IconTrash } from "./icons";
 
-function Form({ initial, onSave, onClose }: { initial: Party | null; onSave: (p: Party) => void; onClose: () => void }) {
+export function CounterpartyForm({ initial, onSave, onClose }: { initial: Party | null; onSave: (p: Party) => void; onClose: () => void }) {
   const [f, setF] = useState<Party>(initial ?? { id: uid(), name: "" });
   const inp =
     "w-full border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand";
@@ -140,7 +140,7 @@ export default function Counterparties({
       )}
 
       {editing !== null && (
-        <Form initial={editing === "new" ? null : editing} onSave={(p) => { onUpsert(p); setEditing(null); }} onClose={() => setEditing(null)} />
+        <CounterpartyForm initial={editing === "new" ? null : editing} onSave={(p) => { onUpsert(p); setEditing(null); }} onClose={() => setEditing(null)} />
       )}
     </div>
   );

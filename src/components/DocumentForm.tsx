@@ -22,6 +22,8 @@ export default function DocumentForm({
   forcedType,
   onSave,
   onClose,
+  onCreateCounterparty,
+  onCreateContract,
 }: {
   initial: Doc | null;
   parties: Party[];
@@ -30,6 +32,8 @@ export default function DocumentForm({
   forcedType?: DocType;
   onSave: (doc: Doc) => void;
   onClose: () => void;
+  onCreateCounterparty?: () => void;
+  onCreateContract?: () => void;
 }) {
   const [type, setType] = useState<DocType>(initial?.type ?? forcedType ?? "invoice");
   const [date, setDate] = useState(initial?.date ?? todayISO());
@@ -115,23 +119,37 @@ export default function DocumentForm({
 
           <div>
             <label className={lbl}>Контрагент</label>
-            <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)} className={`${inp} cursor-pointer ${errors.party ? "border-danger" : ""}`}>
-              <option value="">— не выбран —</option>
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-1.5">
+              <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)} className={`${inp} cursor-pointer flex-1 ${errors.party ? "border-danger" : ""}`}>
+                <option value="">— не выбран —</option>
+                {parties.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {onCreateCounterparty && (
+                <button type="button" onClick={onCreateCounterparty} title="Создать контрагента" className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-white px-3 text-brand transition-colors hover:border-brand hover:bg-brand hover:text-white">
+                  <IconPlus size={14} />
+                </button>
+              )}
+            </div>
             {errors.party && <p className="mt-1.5 text-[12px] font-medium text-danger">{errors.party}</p>}
           </div>
 
           <div className="sm:col-span-2">
             <label className={lbl}>Договор (основание)</label>
-            <select value={contractId} onChange={(e) => setContractId(e.target.value)} className={`${inp} cursor-pointer`}>
-              <option value="">— без договора —</option>
-              {contracts.map((c) => (
-                <option key={c.id} value={c.id}>№ {c.number} · {c.subject}</option>
-              ))}
-            </select>
+            <div className="flex gap-1.5">
+              <select value={contractId} onChange={(e) => setContractId(e.target.value)} className={`${inp} cursor-pointer flex-1`}>
+                <option value="">— без договора —</option>
+                {contracts.map((c) => (
+                  <option key={c.id} value={c.id}>№ {c.number} · {c.subject}</option>
+                ))}
+              </select>
+              {onCreateContract && (
+                <button type="button" onClick={onCreateContract} title="Создать договор" className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-white px-3 text-brand transition-colors hover:border-brand hover:bg-brand hover:text-white">
+                  <IconPlus size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="sm:col-span-2">
