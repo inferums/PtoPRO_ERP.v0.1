@@ -814,9 +814,9 @@ export default function App() {
       </div>
 
       {/* контент */}
-      <main className={`relative h-full overflow-y-auto ${mobileMode ? "" : "md:pl-[68px]"}`}>
+      <main className={`relative h-full ${mobileMode ? "" : "md:pl-[68px]"}`}>
         <div aria-hidden="true" className="bg-dots pointer-events-none absolute inset-0" />
-        <div className="relative">
+        <div className="relative h-full overflow-y-auto">
           <div className="sticky top-0 z-30 hidden border-b border-line bg-bg/95 px-8 py-4 backdrop-blur-sm md:flex md:items-center md:justify-between">
             <div>
               <h1 className="font-display text-[20px] font-extrabold tracking-tight text-ink">{title.t}</h1>
