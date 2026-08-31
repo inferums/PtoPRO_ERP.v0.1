@@ -5,6 +5,7 @@ import {
   displayName,
   fmtDate,
   fmtMoney,
+  getDefaultAccount,
   personName,
   suggestPaymentName,
   STATUS_META,
@@ -161,26 +162,27 @@ export default function DocumentPreview({
             </div>
 
             {/* банковские реквизиты */}
+            {(() => { const ba = doc.bankAccount ?? getDefaultAccount(own); return ba ? (
             <table className="mt-4 w-full border-collapse text-[10.5px] leading-snug">
               <tbody>
                 <tr>
                   <td className="border border-ink/70 px-2 py-1.5 align-top" rowSpan={2}>
-                    <p className="font-semibold">{own.bank}</p>
+                    <p className="font-semibold">{ba.bank}</p>
                     <p className="text-dim">Банк получателя</p>
                   </td>
                   <td className="border border-ink/70 px-2 py-1.5 text-dim">БИК</td>
-                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{own.bik}</td>
+                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{ba.bik}</td>
                 </tr>
                 <tr>
                   <td className="border border-ink/70 px-2 py-1.5 text-dim">Сч. №</td>
-                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{own.corrAccount ?? ""}</td>
+                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{ba.corrAccount ?? ""}</td>
                 </tr>
                 <tr>
                   <td className="border border-ink/70 px-2 py-1.5">
                     ИНН {own.inn ?? "—"}
                   </td>
                   <td className="border border-ink/70 px-2 py-1.5 text-dim">Сч. №</td>
-                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{own.account}</td>
+                  <td className="border border-ink/70 px-2 py-1.5 font-mono">{ba.account}</td>
                 </tr>
                 <tr>
                   <td className="border border-ink/70 px-2 py-1.5 font-semibold" colSpan={3}>{displayName(own.name)}</td>
@@ -190,6 +192,7 @@ export default function DocumentPreview({
                 </tr>
               </tbody>
             </table>
+            ) : null; })()}
 
             {/* заголовок */}
             <h2 className="mt-6 text-center text-[17px] font-bold text-ink">

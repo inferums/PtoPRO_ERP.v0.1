@@ -1,12 +1,15 @@
 import { useState } from "react";
 import {
   fmtMoney,
+  getDefaultAccount,
   todayISO,
   uid,
   TYPE_META,
   type Doc,
+  type DocBankAccount,
   type DocType,
   type LineItem,
+  type Own,
   type Party,
 } from "../lib/store";
 import Modal from "./Modal";
@@ -24,6 +27,7 @@ export default function DocumentForm({
   onClose,
   onCreateCounterparty,
   onCreateContract,
+  own,
 }: {
   initial: Doc | null;
   parties: Party[];
@@ -34,13 +38,16 @@ export default function DocumentForm({
   onClose: () => void;
   onCreateCounterparty?: () => void;
   onCreateContract?: () => void;
+  own?: Own;
 }) {
+  const defaultBa = own ? getDefaultAccount(own) : undefined;
   const [type, setType] = useState<DocType>(initial?.type ?? forcedType ?? "invoice");
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [counterpartyId, setCounterpartyId] = useState(initial?.counterpartyId ?? parties[0]?.id ?? "");
   const [contractId, setContractId] = useState(initial?.contractId ?? "");
   const [vat, setVat] = useState(initial?.vat ?? false);
   const [note, setNote] = useState(initial?.note ?? "");
+  const [bankAccount, setBankAccount] = useState<DocBankAccount | undefined>(initial?.bankAccount ?? (defaultBa ? { bank: defaultBa.bank, bik: defaultBa.bik, account: defaultBa.account, corrAccount: defaultBa.corrAccount } : undefined));
   const [items, setItems] = useState<LineItem[]>(initial ? initial.items.map((i) => ({ ...i })) : [emptyItem()]);
   const [errors, setErrors] = useState<{ party?: string; items?: string }>({});
 
@@ -70,6 +77,7 @@ export default function DocumentForm({
       items,
       vat,
       note: note.trim() || undefined,
+      bankAccount,
     });
   };
 

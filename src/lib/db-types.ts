@@ -62,6 +62,18 @@ export type DbOrgDetails = {
   updated_at: string;
 };
 
+export type DbOrgBankAccount = {
+  id: string;
+  org_id: string;
+  bank: string;
+  bik: string;
+  account: string;
+  corr_account: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type DbParty = {
   id: string;
   org_id: string;
@@ -106,6 +118,7 @@ export type DbDocument = {
   contract_id: string | null;
   vat: boolean;
   note: string;
+  bank_account: string | null; // JSON: DocBankAccount
   created_at: string;
   updated_at: string;
 };

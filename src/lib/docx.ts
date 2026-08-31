@@ -17,12 +17,14 @@ import {
   displayName,
   fmtDate,
   fmtMoney,
+  getDefaultAccount,
   netProfit,
   personName,
   STATUS_META,
   TYPE_META,
   type Contract,
   type Doc,
+  type DocBankAccount,
   type Own,
   type Party,
   type Payment,
@@ -77,7 +79,7 @@ const letterhead = (own: Own) => [
 ];
 
 /* банковская таблица в классическом российском формате */
-const bankTable = (own: Own) =>
+const bankTable = (own: Own, ba: DocBankAccount) =>
   new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders,
@@ -88,25 +90,25 @@ const bankTable = (own: Own) =>
             width: { size: 55, type: WidthType.PERCENTAGE },
             rowSpan: 2,
             children: [
-              new Paragraph({ spacing: { before: 40, after: 20 }, children: [run(own.bank, { bold: true, size: 17 })] }),
+              new Paragraph({ spacing: { before: 40, after: 20 }, children: [run(ba.bank, { bold: true, size: 17 })] }),
               new Paragraph({ children: [run("Банк получателя", { size: 15, color: GREY })] }),
             ],
           }),
           new TableCell({ width: { size: 15, type: WidthType.PERCENTAGE }, children: [new Paragraph({ children: [run("БИК", { size: 15, color: GREY })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [run(own.bik, { size: 17 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(ba.bik, { size: 17 })] })] }),
         ],
       }),
       new TableRow({
         children: [
           new TableCell({ children: [new Paragraph({ children: [run("Сч. №", { size: 15, color: GREY })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [run(own.corrAccount ?? "", { size: 17 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(ba.corrAccount ?? "", { size: 17 })] })] }),
         ],
       }),
       new TableRow({
         children: [
           new TableCell({ children: [new Paragraph({ children: [run(`ИНН ${own.inn ?? "—"}`, { size: 17 })] })] }),
           new TableCell({ children: [new Paragraph({ children: [run("Сч. №", { size: 15, color: GREY })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [run(own.account, { size: 17 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [run(ba.account, { size: 17 })] })] }),
         ],
       }),
       new TableRow({
@@ -197,7 +199,7 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own,
         properties: {},
         children: [
           ...letterhead(own),
-          bankTable(own),
+          bankTable(own, doc.bankAccount ?? getDefaultAccount(own)!),
           new Paragraph({ spacing: { before: 320, after: 200 }, alignment: AlignmentType.CENTER, children: [run(`${typeMeta.title} № ${doc.number} от ${date} г.`, { size: 26, bold: true })] }),
           partiesTable(own, party, contractNo ?? "", date),
           new Paragraph({ spacing: { before: 240 }, children: [] }),
@@ -239,6 +241,7 @@ export async function downloadContractDocx(
 ) {
   const paidTotal = payments.reduce((s, p) => s + p.amount, 0);
   const baseTotal = contract.plannedIncome || docs.reduce((s, d) => s + calc(d).total, 0);
+  const ba = getDefaultAccount(own)!;
   const profit = netProfit(contract);
 
   const plTable = new Table({
@@ -339,8 +342,8 @@ export async function downloadContractDocx(
     new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("5. Заключительные положения", { bold: true })] }),
     new Paragraph({ spacing: { after: 80 }, children: [run("5.1. Договор составлен в двух экземплярах, имеющих одинаковую юридическую силу.")] }),
     new Paragraph({ spacing: { before: 600 }, children: [run(`Исполнитель: ${displayName(own.name)}`, { bold: true })] }),
-    new Paragraph({ children: [run(`ИНН ${own.inn ?? "—"} · ${own.bank}`, { color: GREY })] }),
-    new Paragraph({ children: [run(`БИК ${own.bik} · р/с ${own.account}`, { color: GREY })] }),
+    new Paragraph({ children: [run(`ИНН ${own.inn ?? "—"} · ${ba.bank}`, { color: GREY })] }),
+    new Paragraph({ children: [run(`БИК ${ba.bik} · р/с ${ba.account}`, { color: GREY })] }),
     new Paragraph({ spacing: { before: 300 }, children: [run("______________ / " + own.director)] }),
     new Paragraph({ spacing: { before: 400 }, children: [run(`Заказчик: ${party?.name ?? "____________________"}`, { bold: true })] }),
     new Paragraph({ children: [run(`ИНН ${party?.inn ?? "—"}`, { color: GREY })] }),

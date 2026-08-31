@@ -4,6 +4,13 @@ export type DocStatus = "draft" | "sent" | "signed" | "paid_partial" | "paid";
 
 export type LineItem = { id: string; name: string; qty: number; unit: string; price: number };
 
+export type DocBankAccount = {
+  bank: string;
+  bik: string;
+  account: string;
+  corrAccount: string;
+};
+
 export type Doc = {
   id: string;
   number: number;
@@ -15,6 +22,7 @@ export type Doc = {
   items: LineItem[];
   vat: boolean;
   note?: string;
+  bankAccount?: DocBankAccount; // заморозленные реквизиты счёта на момент создания
 };
 
 export type Party = {
@@ -27,7 +35,16 @@ export type Party = {
   account?: string;
 };
 
-/* Реквизиты ИП — включая колонтитулы (адрес, телефон, email, сайт) и корр. счёт */
+export type BankAccount = {
+  id: string;
+  bank: string;
+  bik: string;
+  account: string;
+  corrAccount: string;
+  isDefault: boolean;
+};
+
+/* Реквизиты ИП — включая колонтитулы (адрес, телефон, email, сайт) и счета */
 export type Own = {
   name: string;
   short: string;
@@ -36,10 +53,7 @@ export type Own = {
   phone?: string;
   email?: string;
   website?: string;
-  bank: string;
-  corrAccount?: string;
-  bik: string;
-  account: string;
+  accounts: BankAccount[];
   director: string;
 };
 
@@ -113,6 +127,10 @@ const d = (monthsAgo: number) => {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
 };
 
+export function getDefaultAccount(own: Own): BankAccount | undefined {
+  return own.accounts.find((a) => a.isDefault) ?? own.accounts[0];
+}
+
 export const DEFAULT_OWN: Own = {
   name: "Индивидуальный предприниматель Яшина Ксения Александровна",
   short: "ИП Яшина К. А.",
@@ -121,10 +139,9 @@ export const DEFAULT_OWN: Own = {
   phone: "8 (981) 149-09-69",
   email: "info@ptopro.ru",
   website: "www.ptopro.ru",
-  bank: "ООО «ОЗОН Банк»",
-  corrAccount: "30101810645374525068",
-  bik: "044525068",
-  account: "40802810500002291325",
+  accounts: [
+    { id: "ba-default", bank: "ООО «ОЗОН Банк»", bik: "044525068", account: "40802810500002291325", corrAccount: "30101810645374525068", isDefault: true },
+  ],
   director: "Яшина К. А.",
 };
 

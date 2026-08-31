@@ -2,11 +2,12 @@ import { supabase } from "./supabase";
 import type {
   DbParty, DbContract, DbDocument, DbDocumentItem, DbPayment, DbLetter,
   DbOrganization, DbOrgDetails, DbGroup, DbGroupMember, DbPermission,
-  DbProfile,
+  DbProfile, DbOrgBankAccount,
   SectionPermission, UserContext, OrgSettings,
 } from "./db-types";
 import type {
   Party, Contract, Doc, LineItem, Payment, Letter, Own, State,
+  BankAccount, DocBankAccount,
 } from "./store";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -44,6 +45,7 @@ export function rowToDoc(r: DbDocument, items: DbDocumentItem[]): Doc {
     id: r.id, number: r.number, type: r.type, status: r.status, date: r.date,
     counterpartyId: r.counterparty_id ?? "", contractId: r.contract_id ?? undefined,
     vat: r.vat, note: r.note || undefined,
+    bankAccount: r.bank_account ? JSON.parse(r.bank_account) : undefined,
     items: items.sort((a, b) => a.sort_order - b.sort_order).map((it) => ({
       id: it.id, name: it.name, qty: it.qty, unit: it.unit, price: it.price,
     })),
@@ -55,6 +57,7 @@ export function docToRows(doc: Doc, orgId: string): { document: Partial<DbDocume
     document: {
       org_id: orgId, number: doc.number, type: doc.type, status: doc.status, date: doc.date,
       counterparty_id: doc.counterpartyId || null, contract_id: doc.contractId ?? null, vat: doc.vat, note: doc.note ?? "",
+      bank_account: doc.bankAccount ? JSON.stringify(doc.bankAccount) : null,
     },
     items: doc.items.map((it, i) => ({
       name: it.name, qty: it.qty, unit: it.unit, price: it.price, sort_order: i,
@@ -78,14 +81,21 @@ export function letterToRow(l: Letter, orgId: string): Partial<DbLetter> {
   return { org_id: orgId, number: l.number, date: l.date, counterparty_id: l.counterpartyId || null, direction: l.direction, subject: l.subject, body: l.body };
 }
 
-export function rowToOwn(details: DbOrgDetails | null): Own {
-  if (!details) return { name: "", short: "", bank: "", bik: "", account: "", director: "" };
+export function rowToBankAccount(r: DbOrgBankAccount): BankAccount {
+  return { id: r.id, bank: r.bank, bik: r.bik, account: r.account, corrAccount: r.corr_account, isDefault: r.is_default };
+}
+
+export function bankAccountToRow(a: BankAccount, orgId: string): Partial<DbOrgBankAccount> {
+  return { org_id: orgId, bank: a.bank, bik: a.bik, account: a.account, corr_account: a.corrAccount, is_default: a.isDefault };
+}
+
+export function rowToOwn(details: DbOrgDetails | null, accounts: BankAccount[]): Own {
+  if (!details) return { name: "", short: "", accounts, director: "" };
   return {
     name: details.full_name, short: details.short_name, inn: details.inn || undefined,
     address: details.address || undefined, phone: details.phone || undefined,
     email: details.email || undefined, website: details.website || undefined,
-    bank: details.bank, corrAccount: details.corr_account || undefined,
-    bik: details.bik, account: details.account, director: details.director,
+    accounts, director: details.director,
   };
 }
 
@@ -93,8 +103,8 @@ export function ownToRow(own: Own): Partial<DbOrgDetails> {
   return {
     full_name: own.name, short_name: own.short, inn: own.inn ?? "",
     address: own.address ?? "", phone: own.phone ?? "", email: own.email ?? "",
-    website: own.website ?? "", bank: own.bank, corr_account: own.corrAccount ?? "",
-    bik: own.bik, account: own.account, director: own.director,
+    website: own.website ?? "", bank: "", corr_account: "",
+    bik: "", account: "", director: own.director,
   };
 }
 
@@ -133,14 +143,37 @@ export async function fetchUserContext(): Promise<UserContext | null> {
    ═══════════════════════════════════════════════════════════════ */
 
 export async function fetchOrgDetails(orgId: string): Promise<Own> {
-  const { data, error } = await supabase.from("org_details").select("*").eq("org_id", orgId).single();
-  if (error) return { name: "", short: "", bank: "", bik: "", account: "", director: "" };
-  return rowToOwn(data);
+  const [{ data, error }, { data: accData }] = await Promise.all([
+    supabase.from("org_details").select("*").eq("org_id", orgId).single(),
+    supabase.from("org_bank_accounts").select("*").eq("org_id", orgId).order("created_at"),
+  ]);
+  if (error) return { name: "", short: "", accounts: [], director: "" };
+  const accounts = (accData as DbOrgBankAccount[] ?? []).map(rowToBankAccount);
+  return rowToOwn(data, accounts);
 }
 
 export async function saveOrgDetails(orgId: string, own: Own) {
   const row = ownToRow(own);
   const { error } = await supabase.from("org_details").upsert({ org_id: orgId, ...row });
+  if (error) throw error;
+}
+
+/* ─── bank accounts ─────────────────────────────────────────── */
+
+export async function fetchBankAccounts(orgId: string): Promise<BankAccount[]> {
+  const { data, error } = await supabase.from("org_bank_accounts").select("*").eq("org_id", orgId).order("created_at");
+  if (error) throw error;
+  return (data as DbOrgBankAccount[]).map(rowToBankAccount);
+}
+
+export async function upsertBankAccount(orgId: string, account: BankAccount) {
+  const row = bankAccountToRow(account, orgId);
+  const { error } = await supabase.from("org_bank_accounts").upsert({ ...row, id: account.id });
+  if (error) throw error;
+}
+
+export async function deleteBankAccount(id: string) {
+  const { error } = await supabase.from("org_bank_accounts").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -394,6 +427,7 @@ export async function migrateStateToSupabase(orgId: string, state: State) {
   for (const d of state.docs) ops.push(upsertDocument(orgId, d));
   for (const p of state.payments) ops.push(upsertPayment(orgId, p));
   for (const l of state.letters) ops.push(upsertLetter(orgId, l));
+  for (const a of state.own.accounts) ops.push(upsertBankAccount(orgId, a));
   ops.push(saveOrgDetails(orgId, state.own));
 
   await Promise.all(ops);

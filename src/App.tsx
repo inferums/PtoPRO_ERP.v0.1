@@ -9,6 +9,8 @@ import {
   CONTRACT_STATUS_META,
   emptyState,
   seedState,
+  getDefaultAccount,
+  type BankAccount,
   type Contract,
   type ContractStatus,
   type Doc,
@@ -22,7 +24,7 @@ import {
 } from "./lib/store";
 import { clearSession, loadSession, onAuthStateChange, fetchUserContext, type Session } from "./lib/auth";
 import type { UserContext } from "./lib/db-types";
-import { fetchFullState, upsertParty as apiUpsertParty, deleteParty as apiDeleteParty, upsertContract as apiUpsertContract, deleteContract as apiDeleteContract, upsertDocument as apiUpsertDocument, deleteDocument as apiDeleteDocument, upsertPayment as apiUpsertPayment, deletePayment as apiDeletePayment, upsertLetter as apiUpsertLetter, saveOrgDetails, updateOrgProfile, uploadLogo, migrateStateToSupabase } from "./lib/api";
+import { fetchFullState, upsertParty as apiUpsertParty, deleteParty as apiDeleteParty, upsertContract as apiUpsertContract, deleteContract as apiDeleteContract, upsertDocument as apiUpsertDocument, deleteDocument as apiDeleteDocument, upsertPayment as apiUpsertPayment, deletePayment as apiDeletePayment, upsertLetter as apiUpsertLetter, saveOrgDetails, updateOrgProfile, uploadLogo, migrateStateToSupabase, upsertBankAccount as apiUpsertBankAccount, deleteBankAccount as apiDeleteBankAccount } from "./lib/api";
 import { PermissionsProvider, usePermissions } from "./lib/permissions";
 import AuthScreen from "./components/AuthScreen";
 import Dashboard from "./components/Dashboard";
@@ -77,6 +79,40 @@ const TITLES: Record<View, { t: string; s: string }> = {
   settings: { t: "Настройки", s: "реквизиты, резервные копии, среда" },
 };
 
+/* ---------- форма расчётного счёта ---------- */
+
+function BankAccountForm({ initial, onSave, onClose }: { initial: BankAccount; onSave: (a: BankAccount) => void; onClose: () => void }) {
+  const [f, setF] = useState<BankAccount>({ ...initial });
+  const inp = "w-full rounded-md border border-line bg-white px-3 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-dim focus:border-brand focus:ring-[3px] focus:ring-brand/15";
+  const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
+  const set = (k: keyof BankAccount) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
+
+  return (
+    <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <label className={lbl}>Банк</label>
+        <input value={f.bank} onChange={set("bank")} placeholder="ООО «ОЗОН Банк»" className={inp} autoFocus />
+      </div>
+      <div>
+        <label className={lbl}>БИК</label>
+        <input value={f.bik} onChange={set("bik")} placeholder="044525068" className={inp} />
+      </div>
+      <div>
+        <label className={lbl}>Корр. счёт</label>
+        <input value={f.corrAccount} onChange={set("corrAccount")} placeholder="30101810645374525068" className={inp} />
+      </div>
+      <div className="sm:col-span-2">
+        <label className={lbl}>Расчётный счёт</label>
+        <input value={f.account} onChange={set("account")} placeholder="40802810500002291325" className={inp} />
+      </div>
+      <div className="sm:col-span-2 flex justify-end gap-2.5 border-t border-line bg-soft px-0 py-3">
+        <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut hover:text-ink">отмена</button>
+        <button onClick={() => f.bank.trim() && f.bik.trim() && f.account.trim() && onSave(f)} className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:bg-brand2">сохранить</button>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- реквизиты ---------- */
 
 function SettingsView({
@@ -90,6 +126,9 @@ function SettingsView({
   onImport,
   onOrgNameSave,
   onLogoUpload,
+  onUpsertBankAccount,
+  onDeleteBankAccount,
+  onSetDefaultBankAccount,
 }: {
   own: Own;
   orgName: string;
@@ -101,11 +140,15 @@ function SettingsView({
   onImport: (f: File) => void;
   onOrgNameSave: (name: string) => void;
   onLogoUpload: (file: File) => void;
+  onUpsertBankAccount: (a: BankAccount) => void;
+  onDeleteBankAccount: (id: string) => void;
+  onSetDefaultBankAccount: (id: string) => void;
 }) {
   const [f, setF] = useState({ ...own });
   const [confirmReset, setConfirmReset] = useState(false);
   const [editingOrgName, setEditingOrgName] = useState(false);
   const [orgNameDraft, setOrgNameDraft] = useState(orgName);
+  const [editingBankAccount, setEditingBankAccount] = useState<BankAccount | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof Own) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
@@ -200,6 +243,44 @@ function SettingsView({
       </div>
 
       {/* ─── реквизиты ─── */}
+      {/* ─── расчётные счета ─── */}
+      <div className="rounded-xl border border-line bg-surface p-6 shadow-sm md:p-7">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-display text-[15px] font-bold text-ink">Расчётные счета</h3>
+            <p className="mt-1 text-[12.5px] text-mut">Основной счёт подставляется в документы автоматически</p>
+          </div>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setEditingBankAccount({ id: uid(), bank: "", bik: "", account: "", corrAccount: "", isDefault: own.accounts.length === 0 })}
+              className="flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-white hover:bg-brand2"
+            >
+              <IconPlus size={12} /> добавить
+            </button>
+          )}
+        </div>
+        <div className="mt-4 space-y-2">
+          {own.accounts.map((a) => (
+            <div key={a.id} className={`flex items-center gap-3 rounded-lg border p-3 ${a.isDefault ? "border-brand/40 bg-brand/5" : "border-line bg-soft"}`}>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-ink">{a.bank || "—"}</p>
+                <p className="font-mono text-[11.5px] text-mut">БИК {a.bik} · р/с {a.account}{a.corrAccount ? ` · к/с ${a.corrAccount}` : ""}</p>
+              </div>
+              {a.isDefault && <span className="shrink-0 rounded-full bg-brand/15 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-brand">основной</span>}
+              {isAdmin && (
+                <div className="flex shrink-0 gap-1">
+                  {!a.isDefault && <button type="button" onClick={() => onSetDefaultBankAccount(a.id)} className="cursor-pointer rounded-md border border-line px-2 py-1.5 font-mono text-[10px] text-mut hover:border-brand hover:text-brand">основной</button>}
+                  <button type="button" onClick={() => setEditingBankAccount(a)} className="cursor-pointer rounded-md border border-line p-1.5 text-mut hover:text-navy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg></button>
+                  <button type="button" onClick={() => onDeleteBankAccount(a.id)} className="cursor-pointer rounded-md border border-line p-1.5 text-mut hover:text-danger"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+                </div>
+              )}
+            </div>
+          ))}
+          {own.accounts.length === 0 && <p className="py-6 text-center text-[13px] text-dim">Нет добавленных счетов</p>}
+        </div>
+      </div>
+
       <div className="rounded-xl border border-line bg-surface p-6 shadow-sm md:p-7">
         <h3 className="font-display text-[15px] font-bold text-ink">Реквизиты поставщика</h3>
         <p className="mt-1 text-[12.5px] text-mut">Эти данные попадают в шапку и колонтитул каждого счёта, акта и договора</p>
@@ -232,22 +313,6 @@ function SettingsView({
           <div className="sm:col-span-2">
             <label className={lbl}>Сайт (колонтитул)</label>
             <input value={f.website ?? ""} onChange={set("website")} className={inp} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Банк</label>
-            <input value={f.bank} onChange={set("bank")} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>БИК</label>
-            <input value={f.bik} onChange={set("bik")} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Корр. счёт</label>
-            <input value={f.corrAccount ?? ""} onChange={set("corrAccount")} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Расчётный счёт</label>
-            <input value={f.account} onChange={set("account")} className={inp} />
           </div>
           <div>
             <label className={lbl}>Подпись (руководитель)</label>
@@ -349,6 +414,27 @@ function SettingsView({
         </div>
         )}
       </div>
+
+      {/* модалка редактирования счёта */}
+      {editingBankAccount && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#39424e]/55 p-4" style={{ overflow: 'auto' }} onMouseDown={(e) => e.target === e.currentTarget && setEditingBankAccount(null)}>
+          <div className="my-8 w-full max-w-lg flex-col rounded-xl bg-surface shadow-[0_45px_100px_-28px_rgba(28,36,50,0.55)]" style={{ display: 'flex' }} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+              <div>
+                <h3 className="font-display text-[15px] font-bold text-ink">{editingBankAccount.bank ? 'Редактировать счёт' : 'Новый счёт'}</h3>
+              </div>
+              <button onClick={() => setEditingBankAccount(null)} className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-md text-mut hover:bg-soft hover:text-ink" title="Закрыть">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <BankAccountForm
+              initial={editingBankAccount}
+              onSave={(a) => { onUpsertBankAccount(a); setEditingBankAccount(null); }}
+              onClose={() => setEditingBankAccount(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -517,6 +603,32 @@ export default function App() {
     setState((st) => ({ ...st, parties: st.parties.filter((x) => x.id !== id) }));
     apiDeleteParty(id).catch(() => toast("Ошибка удаления", "err"));
     if (p) toast(`«${p.name}» удалён из базы`);
+  };
+
+  const upsertBankAccount = (a: BankAccount) => {
+    setState((st) => {
+      const accounts = a.isDefault
+        ? st.own.accounts.map((x) => ({ ...x, isDefault: x.id === a.id }))
+        : st.own.accounts;
+      const exists = accounts.some((x) => x.id === a.id);
+      return { ...st, own: { ...st.own, accounts: exists ? accounts.map((x) => x.id === a.id ? a : x) : [...accounts, a] } };
+    });
+    apiUpsertBankAccount(orgId, a).catch(() => toast("Ошибка сохранения счёта", "err"));
+    toast(`Счёт «${a.bank}» сохранён`);
+  };
+
+  const deleteBankAccount = (id: string) => {
+    const acc = state.own.accounts.find((x) => x.id === id);
+    if (state.own.accounts.length <= 1) { toast("Нельзя удалить последний счёт", "err"); return; }
+    setState((st) => ({ ...st, own: { ...st.own, accounts: st.own.accounts.filter((x) => x.id !== id) } }));
+    apiDeleteBankAccount(id).catch(() => toast("Ошибка удаления счёта", "err"));
+    if (acc) toast(`Счёт «${acc.bank}» удалён`);
+  };
+
+  const setDefaultBankAccount = (id: string) => {
+    setState((st) => ({ ...st, own: { ...st.own, accounts: st.own.accounts.map((x) => ({ ...x, isDefault: x.id === id })) } }));
+    apiUpsertBankAccount(orgId, { ...state.own.accounts.find((x) => x.id === id)!, isDefault: true }).catch(() => {});
+    toast("Основной счёт изменён");
   };
 
   const upsertContract = (c: Contract) => {
@@ -947,6 +1059,9 @@ export default function App() {
                 }}
                 onExport={exportBackup}
                 onImport={importBackup}
+                onUpsertBankAccount={upsertBankAccount}
+                onDeleteBankAccount={deleteBankAccount}
+                onSetDefaultBankAccount={setDefaultBankAccount}
               />
             )}
               </>
@@ -1000,6 +1115,7 @@ export default function App() {
           onClose={() => setEditing(null)}
           onCreateCounterparty={() => setQuickParty(() => {})}
           onCreateContract={() => setQuickContract(() => {})}
+          own={state.own}
         />
       )}
 
