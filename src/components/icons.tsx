@@ -3,11 +3,11 @@ import { detectBrandLogo } from "../lib/brand";
 
 type P = { size?: number; className?: string };
 
-/* Встроенный фирменный знак PtoPRO — квадратная иконка */
+/* Встроенный фирменный знак PtoPRO — логотип компании */
 function BuiltinLogo({ size }: { size: number }) {
   return (
     <img
-      src="/icon-maskable.svg"
+      src="/Logo.svg"
       width={size}
       height={size}
       alt="PtoPRO"

@@ -6,10 +6,10 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1E88E5",
+  "background_color": "#ffffff",
   "theme_color": "#1E88E5",
   "lang": "ru",
   "icons": [
-    { "src": "/icon-maskable.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/Logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
