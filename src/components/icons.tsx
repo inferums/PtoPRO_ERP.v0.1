@@ -3,12 +3,12 @@ import { detectBrandLogo } from "../lib/brand";
 
 type P = { size?: number; className?: string };
 
-/* Встроенный фирменный знак PtoPRO — крыша + текст */
+/* Встроенный фирменный знак PtoPRO — крыша (иконка) */
 function BuiltinLogo({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 2285 1408" fill="none" aria-hidden="true" className="shrink-0">
-      <path d="M 0 720 L 520 0 L 1140 0 L 1340 310 L 1860 310 L 2285 900 L 1760 900 L 1460 470 L 820 470 L 620 720 Z" fill="#1E88E5"/>
-      <text x="1140" y="1370" textAnchor="middle" fontFamily="'Segoe UI', Arial, sans-serif" fontWeight="700" fontSize="420" fill="#1E88E5" letterSpacing="12">PtoPRO</text>
+    <svg width={size} height={size} viewBox="0 0 512 512" fill="none" aria-hidden="true" className="shrink-0">
+      <rect width="512" height="512" rx="112" fill="#1E88E5"/>
+      <path d="M 80 310 L 180 120 L 310 120 L 350 190 L 420 190 L 440 310 L 370 310 L 330 240 L 220 240 L 180 310 Z" fill="#ffffff"/>
     </svg>
   );
 }
