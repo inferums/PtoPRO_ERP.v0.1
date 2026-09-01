@@ -280,6 +280,99 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own,
   save(await Packer.toBlob(docxFile), `${doc.type}-${doc.number}.docx`);
 }
 
+/* ---------- Акт сдачи-приёмки выполненных работ (услуг) ---------- */
+
+const ACT_CLAIMS =
+  "Работы (услуги) выполнены в полном объёме, в установленные сроки, с надлежащим качеством. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.";
+
+export async function downloadActDocx(doc: Doc, party: Party | undefined, own: Own, contractNo?: string, city?: string) {
+  const { subtotal, vat, total } = calc(doc);
+  const date = fmtDate(doc.date);
+
+  const mkSig = () => brandImage("signature", 150, 46, AlignmentType.LEFT);
+  const hasSig = !!mkSig();
+  const stampImg = brandImage("stamp", 100, 100, AlignmentType.LEFT);
+
+  const headerRow = new TableRow({
+    children: [
+      cell("№", { width: 5, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("Наименование работ (услуг)", { bold: true, fill: "F2F6FB" }),
+      cell("Кол-во", { width: 10, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("Ед.", { width: 8, align: AlignmentType.CENTER, bold: true, fill: "F2F6FB" }),
+      cell("Цена", { width: 17, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
+      cell("Сумма", { width: 17, align: AlignmentType.RIGHT, bold: true, fill: "F2F6FB" }),
+    ],
+  });
+
+  const itemRows = doc.items.map(
+    (it, i) =>
+      new TableRow({
+        children: [
+          cell(String(i + 1), { align: AlignmentType.CENTER, color: GREY }),
+          cell(it.name),
+          cell(String(it.qty), { align: AlignmentType.CENTER }),
+          cell(it.unit, { align: AlignmentType.CENTER }),
+          cell(fmtMoney(it.price), { align: AlignmentType.RIGHT }),
+          cell(fmtMoney(it.qty * it.price), { align: AlignmentType.RIGHT, bold: true }),
+        ],
+      })
+  );
+
+  const sigBlock = (role: string, name: string, withSigStamp: boolean) =>
+    new TableCell({
+      width: { size: 50, type: WidthType.PERCENTAGE },
+      children: [
+        new Paragraph({ children: [run(role, { bold: true, size: 17 })] }),
+        ...(withSigStamp && hasSig ? [mkSig()!] : []),
+        new Paragraph({ spacing: { before: withSigStamp && hasSig ? 100 : 300 }, children: [run("______________________")] }),
+        new Paragraph({ children: [run(name, { size: 17 })] }),
+        ...(withSigStamp
+          ? [stampImg ?? new Paragraph({ spacing: { before: 200 }, children: [run("М.П.", { size: 17, color: GREY })] })]
+          : []),
+      ],
+    });
+
+  const docxFile = new Document({
+    styles: { default: { document: { run: { font: { name: "Arial" } } } } },
+    sections: [
+      {
+        properties: {},
+        children: [
+          ...letterhead(own),
+          new Paragraph({ spacing: { before: 320 }, alignment: AlignmentType.CENTER, children: [run(`АКТ № ${doc.number}`, { size: 26, bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [run("сдачи-приёмки выполненных работ (услуг)", { size: 20, bold: true })] }),
+          new Paragraph({ spacing: { before: 120, after: 200 }, alignment: AlignmentType.CENTER, children: [run(`г. ${city ?? "Санкт-Петербург"}   ${date} г.`, { size: 17 })] }),
+          ...(contractNo ? [new Paragraph({ spacing: { after: 200 }, alignment: AlignmentType.CENTER, children: [run(`к договору № ${contractNo}`, { size: 17, color: GREY })] })] : []),
+          new Paragraph({
+            spacing: { after: 200 },
+            children: [
+              run(`${displayName(own.name)}, ИНН ${own.inn ?? "—"} (далее — «Исполнитель»), с одной стороны, и `, { size: 18 }),
+              run(`${party?.name ?? "____________________"}${party?.inn ? ", ИНН " + party.inn : ""} (далее — «Заказчик»)`, { size: 18, bold: true }),
+              run(", с другой стороны, составили настоящий акт о том, что Исполнителем выполнены, а Заказчиком приняты следующие работы (услуги):", { size: 18 }),
+            ],
+          }),
+          new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders, rows: [headerRow, ...itemRows] }),
+          new Paragraph({ spacing: { before: 200 }, alignment: AlignmentType.RIGHT, children: [run("Итого: ", { color: GREY }), run(fmtMoney(subtotal), { bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [run(doc.vat ? "в т.ч. НДС 20 %: " : "НДС: ", { color: GREY }), run(doc.vat ? fmtMoney(vat) : "не облагается", { bold: true })] }),
+          new Paragraph({ spacing: { before: 120 }, alignment: AlignmentType.RIGHT, children: [run("Всего: ", { size: 24, bold: true }), run(fmtMoney(total), { size: 24, bold: true, color: BRAND })] }),
+          new Paragraph({ spacing: { before: 200 }, children: [run(amountInWords(total), { color: GREY })] }),
+          new Paragraph({ spacing: { before: 200 }, children: [run(ACT_CLAIMS, { size: 18 })] }),
+          ...(doc.note ? [new Paragraph({ spacing: { before: 160 }, children: [run("Примечание: ", { bold: true }), run(doc.note)] })] : []),
+          new Paragraph({ spacing: { before: 200 }, children: [run("Настоящий акт составлен в двух экземплярах, имеющих одинаковую юридическую силу, по одному для каждой из сторон.", { size: 17, color: GREY })] }),
+          new Paragraph({ spacing: { before: 300 }, children: [] }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+            rows: [new TableRow({ children: [sigBlock("Исполнитель", displayName(own.name), true), sigBlock("Заказчик", party?.name ?? "____________________", false)] })],
+          }),
+        ],
+      },
+    ],
+  });
+
+  save(await Packer.toBlob(docxFile), `act-${doc.number}.docx`);
+}
+
 export async function downloadContractDocx(
   contract: Contract,
   party: Party | undefined,

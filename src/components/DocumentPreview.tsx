@@ -34,6 +34,127 @@ function Stamp({ date, short }: { date: string; short: string }) {
   );
 }
 
+/* ---------- отдельный шаблон акта (Исполнитель / Заказчик) ---------- */
+
+function ActBody({
+  doc,
+  own,
+  party,
+  contract,
+  subtotal,
+  vat,
+  total,
+  paid,
+  rest,
+  signatureImg,
+}: {
+  doc: Doc;
+  own: Own;
+  party?: Party;
+  contract?: Contract;
+  subtotal: number;
+  vat: number;
+  total: number;
+  paid: number;
+  rest: number;
+  signatureImg: string | null;
+}) {
+  const date = fmtDate(doc.date);
+  const sigLine = (label: string, name: string, withSignature: boolean) => (
+    <div className="text-center">
+      <p className="font-semibold">{label}</p>
+      <div className="flex h-12 items-end justify-center">
+        {withSignature && signatureImg && <img src={signatureImg} alt="Подпись" className="max-h-12 max-w-[160px] object-contain" />}
+      </div>
+      <p className="border-b border-dotted border-ink pb-1" />
+      <p className="mt-1">{name}</p>
+    </div>
+  );
+
+  return (
+    <>
+      {/* заголовок акта */}
+      <h2 className="mt-7 text-center text-[17px] font-bold leading-snug text-ink">
+        АКТ № {doc.number}
+        <span className="block text-[13px] font-semibold">сдачи-приёмки выполненных работ (услуг)</span>
+      </h2>
+      <p className="mt-1.5 text-center text-[12px] text-mut">г. Санкт-Петербург&ensp;{date} г.</p>
+      {contract && (
+        <p className="mt-0.5 text-center text-[11.5px] text-dim">к договору № {contract.number}</p>
+      )}
+
+      {/* вводная часть */}
+      <p className="mt-5 text-justify text-[12px] leading-relaxed text-ink">
+        <span className="font-semibold">{displayName(own.name)}</span>, ИНН {own.inn ?? "—"} (далее — «Исполнитель»), с одной
+        стороны, и <span className="font-semibold">{party?.name ?? "____________________"}</span>
+        {party?.inn ? `, ИНН ${party.inn}` : ""} (далее — «Заказчик»), с другой стороны, составили настоящий акт о том, что
+        Исполнителем выполнены, а Заказчиком приняты следующие работы (услуги):
+      </p>
+
+      {/* позиции */}
+      <table className="mt-4 w-full border-collapse text-[11.5px]">
+        <thead>
+          <tr className="bg-soft">
+            {["№", "Наименование работ (услуг)", "Кол-во", "Ед.", "Цена", "Сумма"].map((h, i) => (
+              <th key={h} className={`border border-ink/60 px-2 py-2 font-mono text-[9.5px] font-semibold uppercase tracking-[0.06em] text-mut ${i === 1 ? "text-left" : "text-center"}`}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {doc.items.map((it, i) => (
+            <tr key={it.id}>
+              <td className="border border-ink/60 px-2 py-2 text-center font-mono text-mut">{i + 1}</td>
+              <td className="border border-ink/60 px-2 py-2">{it.name}</td>
+              <td className="border border-ink/60 px-2 py-2 text-center font-mono">{it.qty}</td>
+              <td className="border border-ink/60 px-2 py-2 text-center">{it.unit}</td>
+              <td className="border border-ink/60 px-2 py-2 text-right font-mono">{fmtMoney(it.price)}</td>
+              <td className="border border-ink/60 px-2 py-2 text-right font-mono font-semibold">{fmtMoney(it.qty * it.price)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* итоги */}
+      <div className="ml-auto mt-3 w-80 text-[12px]">
+        <p className="flex justify-between border-b border-line py-1.5"><span className="text-mut">Итого:</span><span className="font-mono font-semibold">{fmtMoney(subtotal)}</span></p>
+        <p className="flex justify-between border-b border-line py-1.5">
+          <span className="text-mut">{doc.vat ? "в т.ч. НДС 20 %:" : "НДС:"}</span>
+          <span className="font-mono font-semibold">{doc.vat ? fmtMoney(vat) : "не облагается"}</span>
+        </p>
+        <p className="flex justify-between py-2 text-[14px] font-bold">
+          <span>Всего:</span><span className="font-mono">{fmtMoney(total)}</span>
+        </p>
+        {paid > 0 && (
+          <p className="mt-2 flex items-baseline justify-between text-[12.5px]">
+            <span className="text-mut">Оплачено:</span>
+            <span className={`font-mono font-semibold ${rest === 0 ? "text-paid" : "text-[#00796b]"}`}>{fmtMoney(paid)} из {fmtMoney(total)}</span>
+          </p>
+        )}
+      </div>
+
+      <p className="mt-5 text-[12px] italic text-mut">{amountInWords(total)}</p>
+
+      {/* отсутствие претензий */}
+      <p className="mt-5 text-justify text-[12px] leading-relaxed text-ink">
+        Работы (услуги) выполнены в полном объёме, в установленные сроки, с надлежащим качеством. Заказчик претензий по
+        объёму, качеству и срокам оказания услуг не имеет.
+      </p>
+      {doc.note && <p className="mt-3 text-[12px]"><span className="font-semibold">Примечание:</span> {doc.note}</p>}
+      <p className="mt-3 text-[11.5px] text-mut">
+        Настоящий акт составлен в двух экземплярах, имеющих одинаковую юридическую силу, по одному для каждой из сторон.
+      </p>
+
+      {/* подписи обеих сторон */}
+      <div className="mt-10 grid grid-cols-2 gap-8 text-[11.5px]">
+        {sigLine("Исполнитель", displayName(own.name), true)}
+        {sigLine("Заказчик", party?.name ?? "____________________", false)}
+      </div>
+    </>
+  );
+}
+
 export default function DocumentPreview({
   doc,
   party,
@@ -79,8 +200,12 @@ export default function DocumentPreview({
   }, [onClose]);
 
   const downloadWord = async () => {
-    const { downloadDocx } = await import("../lib/docx");
-    await downloadDocx(doc, party, own, contract?.number);
+    const mod = await import("../lib/docx");
+    if (doc.type === "act") {
+      await mod.downloadActDocx(doc, party, own, contract?.number);
+    } else {
+      await mod.downloadDocx(doc, party, own, contract?.number);
+    }
   };
 
   const docOption = {
@@ -162,6 +287,21 @@ export default function DocumentPreview({
               </div>
             </div>
 
+            {doc.type === "act" ? (
+              <ActBody
+                doc={doc}
+                own={own}
+                party={party}
+                contract={contract}
+                subtotal={subtotal}
+                vat={vat}
+                total={total}
+                paid={paid}
+                rest={rest}
+                signatureImg={signatureImg}
+              />
+            ) : (
+              <>
             {/* банковские реквизиты */}
             <table className="mt-4 w-full border-collapse text-[10.5px] leading-snug">
               <tbody>
@@ -293,6 +433,8 @@ export default function DocumentPreview({
                 <p className="mt-1">Бухгалтер {personName(own.name)}</p>
               </div>
             </div>
+              </>
+            )}
 
             <div className="mt-8 flex items-end justify-between gap-4 border-t-2 border-ink pt-4">
               <div className="min-w-0 flex-1">
