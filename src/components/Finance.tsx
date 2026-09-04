@@ -3,7 +3,7 @@ import {
   calc,
   fmtMoney,
   fmtDate,
-  netProfit,
+  contractActuals,
   suggestPaymentName,
   type Contract,
   type Doc,
@@ -35,8 +35,15 @@ export default function Finance({
   const [payForm, setPayForm] = useState<null | { mode: "add" } | { mode: "edit"; pay: Payment }>(null);
   const [confirmPay, setConfirmPay] = useState<string | null>(null);
 
-  const sumIncome = contracts.reduce((s, c) => s + c.actualIncome, 0);
-  const sumExpense = contracts.reduce((s, c) => s + c.actualExpense, 0);
+  /* фактические значения каждого договора — из оплат */
+  const actualsById = useMemo(() => {
+    const m = new Map<string, { income: number; expense: number; profit: number }>();
+    contracts.forEach((c) => m.set(c.id, contractActuals(c, docs, payments, contracts)));
+    return m;
+  }, [contracts, docs, payments]);
+
+  const sumIncome = contracts.reduce((s, c) => s + (actualsById.get(c.id)?.income ?? 0), 0);
+  const sumExpense = contracts.reduce((s, c) => s + (actualsById.get(c.id)?.expense ?? 0), 0);
   const profit = sumIncome - sumExpense;
   const received = payments.reduce((s, p) => s + p.amount, 0);
 
@@ -84,15 +91,16 @@ export default function Finance({
           </thead>
           <tbody className="divide-y divide-line">
             {contracts.map((c, i) => {
-              const np = netProfit(c);
+              const a = actualsById.get(c.id) ?? { income: 0, expense: 0, profit: 0 };
+              const np = a.profit;
               return (
                 <tr key={c.id} onClick={() => onOpenContract(c.id)} className="fade-up cursor-pointer transition-colors hover:bg-soft" style={{ animationDelay: `${Math.min(i * 35, 280)}ms` }}>
                   <td className="px-3 py-3 font-mono text-[12.5px] font-semibold text-brand">{c.number}</td>
                   <td className="max-w-[220px] truncate px-3 py-3 text-[13px] font-medium text-ink">{c.subject}</td>
                   <td className="px-3 py-3 text-right font-mono text-[12.5px] text-mut">{fmtMoney(c.plannedIncome)}</td>
                   <td className="px-3 py-3 text-right font-mono text-[12.5px] text-mut">{fmtMoney(c.plannedExpense)}</td>
-                  <td className="px-3 py-3 text-right font-mono text-[12.5px] text-[#2E7D32]">{fmtMoney(c.actualIncome)}</td>
-                  <td className="px-3 py-3 text-right font-mono text-[12.5px] text-[#C62828]">{fmtMoney(c.actualExpense)}</td>
+                  <td className="px-3 py-3 text-right font-mono text-[12.5px] text-[#2E7D32]">{fmtMoney(a.income)}</td>
+                  <td className="px-3 py-3 text-right font-mono text-[12.5px] text-[#C62828]">{fmtMoney(a.expense)}</td>
                   <td className={`px-3 py-3 text-right font-mono text-[13px] font-semibold ${np >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}`}>{fmtMoney(np)}</td>
                 </tr>
               );

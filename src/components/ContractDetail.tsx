@@ -3,9 +3,9 @@ import {
   calc,
   CONTRACT_KIND_META,
   CONTRACT_STATUS_META,
+  contractActuals,
   fmtDate,
   fmtMoney,
-  netProfit,
   suggestPaymentName,
   STATUS_META,
   TYPE_META,
@@ -119,11 +119,13 @@ export default function ContractDetail({
   const children = contracts.filter((c) => c.parentId === contract.id);
   const kind = CONTRACT_KIND_META[contract.kind];
   const status = CONTRACT_STATUS_META[contract.status];
-  const planPct = contract.plannedIncome > 0 ? Math.min(Math.round((contract.actualIncome / contract.plannedIncome) * 100), 100) : 0;
+  /* фактические значения — из оплат */
+  const actuals = useMemo(() => contractActuals(contract, docs, payments, contracts), [contract, docs, payments, contracts]);
+  const planPct = contract.plannedIncome > 0 ? Math.min(Math.round((actuals.income / contract.plannedIncome) * 100), 100) : 0;
 
   const downloadWord = async () => {
     const { downloadContractDocx } = await import("../lib/docx");
-    await downloadContractDocx(contract, party, own, docs, payments);
+    await downloadContractDocx(contract, party, own, docs, payments, contracts);
   };
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -221,7 +223,7 @@ export default function ContractDetail({
         <Stat label="Плановый доход" value={fmtMoney(contract.plannedIncome)} color="text-[#2E7D32]" />
         <Stat label="Выставлено счетов" value={fmtMoney(invoiced)} color="text-[#1a237e]" />
         <Stat label="Получено оплат" value={fmtMoney(received)} color="text-[#2E7D32]" />
-        <Stat label="Расходы по договору" value={fmtMoney(contract.actualExpense)} color="text-[#C62828]" />
+        <Stat label="Расходы по договору" value={fmtMoney(actuals.expense)} color="text-[#C62828]" />
       </div>
 
       {/* вкладки */}
@@ -288,8 +290,14 @@ export default function ContractDetail({
 
               <Row label="Плановый доход">{fmtMoney(contract.plannedIncome)}</Row>
               <Row label="Плановый расход">{fmtMoney(contract.plannedExpense)}</Row>
+              <Row label="Фактический доход">
+                <span className="text-[#2E7D32]">{fmtMoney(actuals.income)}</span>
+              </Row>
+              <Row label="Фактический расход">
+                <span className="text-[#C62828]">{fmtMoney(actuals.expense)}</span>
+              </Row>
               <Row label="Чистая прибыль">
-                <span className={netProfit(contract) >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}>{fmtMoney(netProfit(contract))}</span>
+                <span className={actuals.profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}>{fmtMoney(actuals.profit)}</span>
               </Row>
 
               {contract.plannedIncome > 0 && (

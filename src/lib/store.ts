@@ -64,6 +64,29 @@ export type Contract = {
 
 export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;
 
+/* Фактические значения договора собираются из оплат, а не хранятся вручную:
+   доход — суммы оплат по документам самого договора;
+   расход — суммы оплат по документам его подчинённых (субподрядных) договоров;
+   чистая прибыль — доход минус расход. */
+export function contractActuals(
+  contract: Contract,
+  docs: Doc[],
+  payments: Payment[],
+  contracts: Contract[]
+): { income: number; expense: number; profit: number } {
+  const paidByDoc = new Map<string, number>();
+  for (const p of payments) if (p.docId) paidByDoc.set(p.docId, (paidByDoc.get(p.docId) ?? 0) + p.amount);
+
+  const sumForContract = (id: string) =>
+    docs.filter((d) => d.contractId === id).reduce((s, d) => s + (paidByDoc.get(d.id) ?? 0), 0);
+
+  const income = sumForContract(contract.id);
+  const childIds = contracts.filter((c) => c.parentId === contract.id).map((c) => c.id);
+  const expense = childIds.reduce((s, id) => s + sumForContract(id), 0);
+
+  return { income, expense, profit: income - expense };
+}
+
 export type Payment = {
   id: string;
   docId: string; // пустая строка — оплата не привязана к документу
@@ -179,6 +202,7 @@ export function seedState(): State {
     { id: "pay2", docId: "d8", date: d(1) + "-08", amount: 6000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d8")) },
     { id: "pay3", docId: "d9", date: d(3) + "-25", amount: 63000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d9"), contracts.find((c) => c.id === "c2")) },
     { id: "pay4", docId: "d10", date: d(4) + "-28", amount: 9000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d10"), contracts.find((c) => c.id === "c1")) },
+    { id: "pay5", docId: "d3", date: d(0) + "-05", amount: 35500, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d3"), contracts.find((c) => c.id === "c3")) },
   ];
 
   const letters: Letter[] = [

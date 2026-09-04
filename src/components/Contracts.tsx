@@ -3,9 +3,9 @@ import {
   CONTRACT_KIND_META,
   CONTRACT_STATUS_META,
   CONTRACT_STATUS_ORDER,
+  contractActuals,
   fmtDate,
   fmtMoney,
-  netProfit,
   todayISO,
   uid,
   type Contract,
@@ -13,6 +13,7 @@ import {
   type ContractStatus,
   type Doc,
   type Party,
+  type Payment,
 } from "../lib/store";
 import Modal from "./Modal";
 import { IconContract, IconDownload, IconPlus } from "./icons";
@@ -162,14 +163,6 @@ export function ContractForm({
           <input type="number" min={0} value={f.plannedExpense || ""} onChange={(e) => setF({ ...f, plannedExpense: Number(e.target.value) || 0 })} className={inp} />
         </div>
         <div>
-          <label className={lbl}>Фактический доход, ₽</label>
-          <input type="number" min={0} value={f.actualIncome || ""} onChange={(e) => setF({ ...f, actualIncome: Number(e.target.value) || 0 })} className={inp} />
-        </div>
-        <div>
-          <label className={lbl}>Фактический расход, ₽</label>
-          <input type="number" min={0} value={f.actualExpense || ""} onChange={(e) => setF({ ...f, actualExpense: Number(e.target.value) || 0 })} className={inp} />
-        </div>
-        <div>
           <label className={lbl}>Начало</label>
           <input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} className={inp} />
         </div>
@@ -214,6 +207,7 @@ export default function Contracts({
   contracts,
   parties,
   docs,
+  payments,
   onUpsert,
   onDelete,
   onOpen,
@@ -222,6 +216,7 @@ export default function Contracts({
   contracts: Contract[];
   parties: Party[];
   docs: Doc[];
+  payments: Payment[];
   onUpsert: (c: Contract) => void;
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
@@ -257,17 +252,25 @@ export default function Contracts({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contracts, parties, q, fStatus, fKind, fParty]);
 
+  /* фактические значения каждого договора — из оплат */
+  const actualsById = useMemo(() => {
+    const m = new Map<string, { income: number; expense: number; profit: number }>();
+    contracts.forEach((c) => m.set(c.id, contractActuals(c, docs, payments, contracts)));
+    return m;
+  }, [contracts, docs, payments]);
+
   /* сводные показатели по текущей выборке */
   const totals = useMemo(() => {
     const t = { plan: 0, factIn: 0, factOut: 0, profit: 0 };
     rows.forEach(({ c }) => {
+      const a = actualsById.get(c.id) ?? { income: 0, expense: 0, profit: 0 };
       t.plan += c.plannedIncome;
-      t.factIn += c.actualIncome;
-      t.factOut += c.actualExpense;
-      t.profit += netProfit(c);
+      t.factIn += a.income;
+      t.factOut += a.expense;
+      t.profit += a.profit;
     });
     return t;
-  }, [rows]);
+  }, [rows, actualsById]);
 
   /* экспорт реестра в CSV (открывается в Excel благодаря BOM и «;») */
   const exportCsv = () => {
@@ -276,25 +279,26 @@ export default function Contracts({
       return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const head = ["Номер", "Предмет", "Контрагент", "Тип", "Плановый доход", "Плановый расход", "Фактический доход", "Фактический расход", "Чистая прибыль", "Статус", "Начало", "Окончание", "Родительский договор"];
-    const lines = rows.map(({ c, nested }) =>
-      [
+    const lines = rows.map(({ c, nested }) => {
+      const a = actualsById.get(c.id) ?? { income: 0, expense: 0, profit: 0 };
+      return [
         c.number,
         c.subject,
         partyName(c.counterpartyId),
         CONTRACT_KIND_META[c.kind].label,
         c.plannedIncome,
         c.plannedExpense,
-        c.actualIncome,
-        c.actualExpense,
-        netProfit(c),
+        a.income,
+        a.expense,
+        a.profit,
         CONTRACT_STATUS_META[c.status].label,
         c.startDate,
         c.endDate,
         nested ? (contracts.find((x) => x.id === c.parentId)?.number ?? "") : "",
       ]
         .map(esc)
-        .join(";")
-    );
+        .join(";");
+    });
     const csv = "\uFEFF" + [head.join(";"), ...lines].join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -380,7 +384,8 @@ export default function Contracts({
             {rows.map(({ c, nested }, i) => {
               const status = CONTRACT_STATUS_META[c.status];
               const kind = CONTRACT_KIND_META[c.kind];
-              const profit = netProfit(c);
+              const a = actualsById.get(c.id) ?? { income: 0, expense: 0, profit: 0 };
+              const profit = a.profit;
               return (
                 <tr
                   key={c.id}
@@ -401,8 +406,8 @@ export default function Contracts({
                   </td>
                   {money(c.plannedIncome)}
                   {money(c.plannedExpense)}
-                  {money(c.actualIncome, "text-[#2E7D32]")}
-                  {money(c.actualExpense, "text-[#C62828]")}
+                  {money(a.income, "text-[#2E7D32]")}
+                  {money(a.expense, "text-[#C62828]")}
                   {money(profit, `font-medium ${profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}`)}
                   <td className="whitespace-nowrap px-2 py-2.5 text-center">
                     <span className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium ${status.chip}`}>{status.label}</span>

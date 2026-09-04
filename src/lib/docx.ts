@@ -19,7 +19,7 @@ import {
   displayName,
   fmtDate,
   fmtMoney,
-  netProfit,
+  contractActuals,
   personName,
   STATUS_META,
   TYPE_META,
@@ -378,11 +378,14 @@ export async function downloadContractDocx(
   party: Party | undefined,
   own: Own,
   docs: Doc[],
-  payments: Payment[]
+  payments: Payment[],
+  contracts: Contract[]
 ) {
   const paidTotal = payments.reduce((s, p) => s + p.amount, 0);
   const baseTotal = contract.plannedIncome || docs.reduce((s, d) => s + calc(d).total, 0);
-  const profit = netProfit(contract);
+  /* фактические значения — из оплат */
+  const actuals = contractActuals(contract, docs, payments, contracts);
+  const profit = actuals.profit;
 
   const plTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -399,14 +402,14 @@ export async function downloadContractDocx(
         children: [
           cell("Доход"),
           cell(fmtMoney(contract.plannedIncome), { align: AlignmentType.RIGHT }),
-          cell(fmtMoney(contract.actualIncome), { align: AlignmentType.RIGHT, color: "2E7D32" }),
+          cell(fmtMoney(actuals.income), { align: AlignmentType.RIGHT, color: "2E7D32" }),
         ],
       }),
       new TableRow({
         children: [
           cell("Расход"),
           cell(fmtMoney(contract.plannedExpense), { align: AlignmentType.RIGHT }),
-          cell(fmtMoney(contract.actualExpense), { align: AlignmentType.RIGHT, color: "C62828" }),
+          cell(fmtMoney(actuals.expense), { align: AlignmentType.RIGHT, color: "C62828" }),
         ],
       }),
       new TableRow({

@@ -901,6 +901,7 @@ export default function App() {
                 contracts={state.contracts}
                 parties={state.parties}
                 docs={state.docs}
+                payments={state.payments}
                 onUpsert={upsertContract}
                 onDelete={deleteContract}
                 onOpen={(id) => setContractId(id)}
