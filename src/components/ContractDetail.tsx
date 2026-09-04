@@ -8,12 +8,11 @@ import {
   netProfit,
   suggestPaymentName,
   STATUS_META,
-  todayISO,
   TYPE_META,
-  uid,
   type Contract,
   type ContractStatus,
   type Doc,
+  type DocType,
   type Letter,
   type Own,
   type Party,
@@ -71,6 +70,8 @@ export default function ContractDetail({
   onAddPayment,
   onUpdatePayment,
   onDeletePayment,
+  onNewDoc,
+  onNewSubContract,
 }: {
   contract: Contract;
   party: Party | undefined;
@@ -89,6 +90,8 @@ export default function ContractDetail({
   onAddPayment: (p: Payment) => void;
   onUpdatePayment: (p: Payment) => void;
   onDeletePayment: (id: string) => void;
+  onNewDoc: (type: DocType) => void;
+  onNewSubContract: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("card");
   const [editing, setEditing] = useState(false);
@@ -116,6 +119,7 @@ export default function ContractDetail({
   const children = contracts.filter((c) => c.parentId === contract.id);
   const kind = CONTRACT_KIND_META[contract.kind];
   const status = CONTRACT_STATUS_META[contract.status];
+  const planPct = contract.plannedIncome > 0 ? Math.min(Math.round((contract.actualIncome / contract.plannedIncome) * 100), 100) : 0;
 
   const downloadWord = async () => {
     const { downloadContractDocx } = await import("../lib/docx");
@@ -151,6 +155,15 @@ export default function ContractDetail({
     </button>
   );
 
+  const addDocBtn = (type: DocType) => (
+    <button
+      onClick={() => onNewDoc(type)}
+      className="flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-brand2"
+    >
+      <IconPlus size={13} /> {TYPE_META[type].label}
+    </button>
+  );
+
   return (
     <div className="fade-up space-y-3">
       {/* шапка: назад + действия */}
@@ -163,6 +176,13 @@ export default function ContractDetail({
           Назад
         </button>
         <div className="flex items-center gap-1">
+          <button
+            onClick={onNewSubContract}
+            title="Создать подчинённый расходный договор"
+            className="mr-1 flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-line px-2.5 font-mono text-[10px] uppercase tracking-[0.06em] text-mut transition-colors hover:border-brand hover:text-brand"
+          >
+            <IconPlus size={13} /> субдоговор
+          </button>
           <button onClick={() => setEditing(true)} title="Редактировать" className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-mut transition-colors hover:bg-soft hover:text-ink">
             <IconPencil size={16} />
           </button>
@@ -245,6 +265,12 @@ export default function ContractDetail({
               <div className="border-b border-line pb-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-mut">Подчинённые расходные договоры</span>
+                  <button
+                    onClick={onNewSubContract}
+                    className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.08em] text-brand transition-colors hover:text-brand2 hover:underline"
+                  >
+                    + добавить
+                  </button>
                 </div>
                 <div className="mt-1 space-y-1">
                   {children.length === 0 && <span className="text-sm text-dim">нет</span>}
@@ -265,6 +291,22 @@ export default function ContractDetail({
               <Row label="Чистая прибыль">
                 <span className={netProfit(contract) >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}>{fmtMoney(netProfit(contract))}</span>
               </Row>
+
+              {contract.plannedIncome > 0 && (
+                <div className="border-b border-line pb-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-mut">Выполнение плана по доходу</span>
+                    <span className="font-mono text-[12px] font-semibold text-ink">{planPct} %</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-bg">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${planPct >= 100 ? "bg-paid" : "bg-brand"}`}
+                      style={{ width: `${planPct}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <Row label="Начало">{fmtDate(contract.startDate)}</Row>
               <Row label="Окончание">{fmtDate(contract.endDate)}</Row>
 
@@ -294,9 +336,15 @@ export default function ContractDetail({
 
       {tab === "invoices" && (
         <div className="fade-up space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-dim">
+              счетов: {invoices.length} · на сумму {fmtMoney(invoiced)}
+            </p>
+            {addDocBtn("invoice")}
+          </div>
           {invoices.length === 0 && (
             <p className="rounded-xl border border-dashed border-line2 bg-surface p-8 text-center text-[13px] text-mut">
-              По этому договору счетов пока нет
+              По этому договору счетов пока нет — создайте первый
             </p>
           )}
           {invoices.map(docRow)}
@@ -305,9 +353,15 @@ export default function ContractDetail({
 
       {tab === "acts" && (
         <div className="fade-up space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-dim">
+              актов: {acts.length} · на сумму {fmtMoney(acts.reduce((s, d) => s + calc(d).total, 0))}
+            </p>
+            {addDocBtn("act")}
+          </div>
           {acts.length === 0 && (
             <p className="rounded-xl border border-dashed border-line2 bg-surface p-8 text-center text-[13px] text-mut">
-              По этому договору актов пока нет
+              По этому договору актов пока нет — создайте первый
             </p>
           )}
           {acts.map(docRow)}
@@ -316,7 +370,10 @@ export default function ContractDetail({
 
       {tab === "payments" && (
         <div className="fade-up space-y-2">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-dim">
+              оплат: {payments.length} · получено {fmtMoney(received)}
+            </p>
             <button
               onClick={() => setPayForm({ mode: "add" })}
               className="flex cursor-pointer items-center gap-1.5 rounded-md bg-paid px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#268257]"

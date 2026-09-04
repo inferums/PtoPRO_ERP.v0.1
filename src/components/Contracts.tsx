@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CONTRACT_KIND_META,
   CONTRACT_STATUS_META,
@@ -15,7 +15,62 @@ import {
   type Party,
 } from "../lib/store";
 import Modal from "./Modal";
-import { IconContract } from "./icons";
+import { IconContract, IconDownload, IconPlus } from "./icons";
+
+/* плавный набор числа при смене значения (реакция на фильтры) */
+function useCountUp(target: number) {
+  const [v, setV] = useState(target);
+  const prevRef = useRef(target);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setV(target);
+      prevRef.current = target;
+      return;
+    }
+    const from = prevRef.current;
+    prevRef.current = target;
+    if (from === target) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const dur = 500;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      setV(from + (target - from) * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+  return v;
+}
+
+/* ---------- сводные показатели по отфильтрованным договорам ---------- */
+
+function TotalsStrip({ count, plan, factIn, factOut, profit }: { count: number; plan: number; factIn: number; factOut: number; profit: number }) {
+  const vPlan = useCountUp(plan);
+  const vIn = useCountUp(factIn);
+  const vOut = useCountUp(factOut);
+  const vProfit = useCountUp(profit);
+
+  const cell = (label: string, value: string, cls = "text-ink") => (
+    <div className="bg-surface px-3 py-2.5">
+      <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-dim">{label}</p>
+      <p className={`mt-0.5 whitespace-nowrap font-mono text-[14.5px] font-bold ${cls}`}>{value}</p>
+    </div>
+  );
+
+  return (
+    <div className="fade-up mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line shadow-sm sm:grid-cols-5">
+      {cell("Договоров", String(count))}
+      {cell("План, доход", fmtMoney(Math.round(vPlan)))}
+      {cell("Факт, доход", fmtMoney(Math.round(vIn)), "text-[#2E7D32]")}
+      {cell("Факт, расход", fmtMoney(Math.round(vOut)), "text-[#C62828]")}
+      {cell("Чистая прибыль", fmtMoney(Math.round(vProfit)), profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]")}
+    </div>
+  );
+}
+
+/* ---------- форма договора ---------- */
 
 export function ContractForm({
   initial,
@@ -23,12 +78,14 @@ export function ContractForm({
   parents,
   onSave,
   onClose,
+  onCreateCounterparty,
 }: {
   initial: Contract | null;
   parties: Party[];
   parents: { id: string; number: string }[];
   onSave: (c: Contract) => void;
   onClose: () => void;
+  onCreateCounterparty?: () => void;
 }) {
   const [f, setF] = useState<Contract>(
     initial ?? {
@@ -52,94 +109,106 @@ export function ContractForm({
 
   return (
     <Modal
-      title={initial ? `Договор ${initial.number}` : "Новый договор"}
-      subtitle={initial ? "редактирование" : "доходный или расходный"}
+      title={initial?.number ? `Договор ${initial.number}` : "Новый договор"}
+      subtitle={initial ? (initial.parentId ? "субдоговор · редактирование" : "редактирование") : "доходный или расходный"}
       onClose={onClose}
-      width="max-w-2xl"
+      width="max-w-3xl"
     >
       <div className="grid gap-4 px-5 py-4 sm:grid-cols-2">
-          <div>
-            <label className={lbl}>Номер</label>
-            <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Д-004/2024" className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Контрагент</label>
-            <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer`}>
+        <div>
+          <label className={lbl}>Номер</label>
+          <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Д-004/2024" className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Контрагент</label>
+          <div className="flex gap-1.5">
+            <select value={f.counterpartyId} onChange={(e) => setF({ ...f, counterpartyId: e.target.value })} className={`${inp} cursor-pointer flex-1`}>
               {parties.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Предмет договора</label>
-            <input value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} placeholder="Техническая поддержка" className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Тип</label>
-            <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ContractKind })} className={`${inp} cursor-pointer`}>
-              <option value="income">Доход</option>
-              <option value="expense">Расход</option>
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Статус</label>
-            <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as ContractStatus })} className={`${inp} cursor-pointer`}>
-              {CONTRACT_STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>{CONTRACT_STATUS_META[s].label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Плановый доход, ₽</label>
-            <input type="number" min={0} value={f.plannedIncome || ""} onChange={(e) => setF({ ...f, plannedIncome: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Плановый расход, ₽</label>
-            <input type="number" min={0} value={f.plannedExpense || ""} onChange={(e) => setF({ ...f, plannedExpense: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Фактический доход, ₽</label>
-            <input type="number" min={0} value={f.actualIncome || ""} onChange={(e) => setF({ ...f, actualIncome: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Фактический расход, ₽</label>
-            <input type="number" min={0} value={f.actualExpense || ""} onChange={(e) => setF({ ...f, actualExpense: Number(e.target.value) || 0 })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Начало</label>
-            <input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Окончание</label>
-            <input type="date" value={f.endDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} className={inp} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>Родительский договор (для субподряда)</label>
-            <select value={f.parentId ?? ""} onChange={(e) => setF({ ...f, parentId: e.target.value || undefined })} className={`${inp} cursor-pointer`}>
-              <option value="">— нет (самостоятельный) —</option>
-              {parents.map((p) => (
-                <option key={p.id} value={p.id}>{p.number}</option>
-              ))}
-            </select>
+            {onCreateCounterparty && (
+              <button type="button" onClick={onCreateCounterparty} title="Создать контрагента" className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line bg-white px-3 text-brand transition-colors hover:border-brand hover:bg-brand hover:text-white">
+                <IconPlus size={14} />
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex justify-end gap-2.5 border-t border-line bg-soft px-5 py-3.5">
-          <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
-            отмена
-          </button>
-          <button
-            onClick={() => f.number.trim() && onSave(f)}
-            className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
-          >
-            сохранить
-          </button>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Предмет договора</label>
+          <input value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} placeholder="Техническая поддержка" className={inp} />
         </div>
+        <div>
+          <label className={lbl}>Тип</label>
+          <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as ContractKind })} className={`${inp} cursor-pointer`}>
+            <option value="income">Доход</option>
+            <option value="expense">Расход</option>
+          </select>
+        </div>
+        <div>
+          <label className={lbl}>Статус</label>
+          <select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as ContractStatus })} className={`${inp} cursor-pointer`}>
+            {CONTRACT_STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>{CONTRACT_STATUS_META[s].label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={lbl}>Плановый доход, ₽</label>
+          <input type="number" min={0} value={f.plannedIncome || ""} onChange={(e) => setF({ ...f, plannedIncome: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Плановый расход, ₽</label>
+          <input type="number" min={0} value={f.plannedExpense || ""} onChange={(e) => setF({ ...f, plannedExpense: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Фактический доход, ₽</label>
+          <input type="number" min={0} value={f.actualIncome || ""} onChange={(e) => setF({ ...f, actualIncome: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Фактический расход, ₽</label>
+          <input type="number" min={0} value={f.actualExpense || ""} onChange={(e) => setF({ ...f, actualExpense: Number(e.target.value) || 0 })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Начало</label>
+          <input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Окончание</label>
+          <input type="date" value={f.endDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} className={inp} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Родительский договор (для субподряда)</label>
+          <select value={f.parentId ?? ""} onChange={(e) => setF({ ...f, parentId: e.target.value || undefined })} className={`${inp} cursor-pointer`}>
+            <option value="">— нет (самостоятельный) —</option>
+            {parents.map((p) => (
+              <option key={p.id} value={p.id}>{p.number}</option>
+            ))}
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Описание</label>
+          <input value={f.description ?? ""} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Краткое описание работ" className={inp} />
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
+        <button onClick={onClose} className="cursor-pointer rounded-md border border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-mut transition-colors hover:border-line2 hover:text-ink">
+          отмена
+        </button>
+        <button
+          onClick={() => f.number.trim() && onSave(f)}
+          className="cursor-pointer rounded-md bg-brand px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand2"
+        >
+          сохранить
+        </button>
+      </div>
     </Modal>
   );
 }
 
 const sel =
-  "h-9 w-36 cursor-pointer border border-line bg-surface px-3 text-[13px] text-ink outline-none transition-colors focus:border-brand";
+  "h-9 w-36 cursor-pointer rounded-md border border-line bg-surface px-3 text-[13px] text-ink outline-none transition-colors focus:border-brand";
 
 export default function Contracts({
   contracts,
@@ -148,6 +217,7 @@ export default function Contracts({
   onUpsert,
   onDelete,
   onOpen,
+  onCreateCounterparty,
 }: {
   contracts: Contract[];
   parties: Party[];
@@ -155,6 +225,7 @@ export default function Contracts({
   onUpsert: (c: Contract) => void;
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
+  onCreateCounterparty?: () => void;
 }) {
   const [editing, setEditing] = useState<Contract | null | "new">(null);
   const [q, setQ] = useState("");
@@ -164,7 +235,6 @@ export default function Contracts({
 
   const partyName = (id: string) => parties.find((p) => p.id === id)?.name ?? "—";
   const childrenOf = (id: string) => contracts.filter((c) => c.parentId === id);
-  const linkedDocs = (id: string) => docs.filter((d) => d.contractId === id).length;
 
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -187,6 +257,56 @@ export default function Contracts({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contracts, parties, q, fStatus, fKind, fParty]);
 
+  /* сводные показатели по текущей выборке */
+  const totals = useMemo(() => {
+    const t = { plan: 0, factIn: 0, factOut: 0, profit: 0 };
+    rows.forEach(({ c }) => {
+      t.plan += c.plannedIncome;
+      t.factIn += c.actualIncome;
+      t.factOut += c.actualExpense;
+      t.profit += netProfit(c);
+    });
+    return t;
+  }, [rows]);
+
+  /* экспорт реестра в CSV (открывается в Excel благодаря BOM и «;») */
+  const exportCsv = () => {
+    const esc = (v: string | number) => {
+      const s = String(v);
+      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const head = ["Номер", "Предмет", "Контрагент", "Тип", "Плановый доход", "Плановый расход", "Фактический доход", "Фактический расход", "Чистая прибыль", "Статус", "Начало", "Окончание", "Родительский договор"];
+    const lines = rows.map(({ c, nested }) =>
+      [
+        c.number,
+        c.subject,
+        partyName(c.counterpartyId),
+        CONTRACT_KIND_META[c.kind].label,
+        c.plannedIncome,
+        c.plannedExpense,
+        c.actualIncome,
+        c.actualExpense,
+        netProfit(c),
+        CONTRACT_STATUS_META[c.status].label,
+        c.startDate,
+        c.endDate,
+        nested ? (contracts.find((x) => x.id === c.parentId)?.number ?? "") : "",
+      ]
+        .map(esc)
+        .join(";")
+    );
+    const csv = "\uFEFF" + [head.join(";"), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reestr-dogovorov-${todayISO()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 800);
+  };
+
   const money = (v: number, cls = "") => (
     <td className={`whitespace-nowrap px-2 py-2 text-right text-[13px] ${cls}`}>{fmtMoney(v)}</td>
   );
@@ -204,7 +324,7 @@ export default function Contracts({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Поиск..."
-            className="h-9 w-full border border-line bg-surface pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-dim focus:border-brand"
+            className="h-9 w-full rounded-md border border-line bg-surface pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-dim focus:border-brand"
           />
         </div>
         <select value={fStatus} onChange={(e) => setFStatus(e.target.value as ContractStatus | "all")} className={sel} title="Статус">
@@ -218,22 +338,30 @@ export default function Contracts({
           <option value="income">Доход</option>
           <option value="expense">Расход</option>
         </select>
-        <select value={fParty} onChange={(e) => setFParty(e.target.value)} className="h-9 w-44 cursor-pointer border border-line bg-surface px-3 text-[13px] outline-none transition-colors focus:border-brand" title="Контрагент">
+        <select value={fParty} onChange={(e) => setFParty(e.target.value)} className="h-9 w-44 cursor-pointer rounded-md border border-line bg-surface px-3 text-[13px] outline-none transition-colors focus:border-brand" title="Контрагент">
           <option value="all">Контрагент</option>
           {parties.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
         <button
+          onClick={exportCsv}
+          title="Выгрузить реестр в CSV (Excel)"
+          className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-line bg-surface px-3 font-mono text-[11px] uppercase tracking-[0.06em] text-mut transition-colors hover:border-line2 hover:text-ink"
+        >
+          <IconDownload size={14} /> csv
+        </button>
+        <button
           onClick={() => setEditing("new")}
           className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-brand px-4 font-mono text-[12px] font-semibold uppercase tracking-[0.06em] text-white transition-colors hover:bg-brand2"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M5 12h14" /><path d="M12 5v14" />
-          </svg>
+          <IconPlus size={14} />
           Новый договор
         </button>
       </div>
+
+      {/* сводные показатели по выборке */}
+      <TotalsStrip count={rows.length} plan={totals.plan} factIn={totals.factIn} factOut={totals.factOut} profit={totals.profit} />
 
       {/* таблица */}
       <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface shadow-sm">
@@ -269,7 +397,7 @@ export default function Contracts({
                   </td>
                   <td className="whitespace-nowrap px-2 py-2.5 text-[13px] text-ink">{partyName(c.counterpartyId)}</td>
                   <td className="whitespace-nowrap px-2 py-2.5 text-center">
-                    <span className={`inline-block border px-2 py-0.5 text-[11px] font-medium ${kind.chip}`}>{kind.label}</span>
+                    <span className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium ${kind.chip}`}>{kind.label}</span>
                   </td>
                   {money(c.plannedIncome)}
                   {money(c.plannedExpense)}
@@ -277,24 +405,24 @@ export default function Contracts({
                   {money(c.actualExpense, "text-[#C62828]")}
                   {money(profit, `font-medium ${profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}`)}
                   <td className="whitespace-nowrap px-2 py-2.5 text-center">
-                    <span className={`inline-block border px-2 py-0.5 text-[11px] font-medium ${status.chip}`}>{status.label}</span>
+                    <span className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium ${status.chip}`}>{status.label}</span>
                   </td>
                   <td className="whitespace-nowrap px-2 py-2.5 text-[11.5px] text-mut">
                     {fmtDate(c.startDate)} — {fmtDate(c.endDate)}
                   </td>
                   <td className="whitespace-nowrap px-2 py-2.5">
                     <div className="flex justify-center gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); onOpen(c.id); }} title="Открыть" className="cursor-pointer p-1.5 text-mut transition-colors hover:bg-line/50 hover:text-brand">
+                      <button onClick={(e) => { e.stopPropagation(); onOpen(c.id); }} title="Открыть" className="cursor-pointer rounded-md p-1.5 text-mut transition-colors hover:bg-line/50 hover:text-brand">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                           <path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" /><circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setEditing(c); }} title="Редактировать" className="cursor-pointer p-1.5 text-mut transition-colors hover:bg-line/50 hover:text-navy">
+                      <button onClick={(e) => { e.stopPropagation(); setEditing(c); }} title="Редактировать" className="cursor-pointer rounded-md p-1.5 text-mut transition-colors hover:bg-line/50 hover:text-navy">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                           <path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" /><path d="m15 5 4 4" />
                         </svg>
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }} title="Удалить" className="cursor-pointer p-1.5 text-mut transition-colors hover:bg-line/50 hover:text-danger">
+                      <button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }} title="Удалить" className="cursor-pointer rounded-md p-1.5 text-mut transition-colors hover:bg-line/50 hover:text-danger">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                           <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><path d="M10 11v6M14 11v6" />
                         </svg>
@@ -327,6 +455,7 @@ export default function Contracts({
           parents={contracts.filter((c) => !c.parentId && c.id !== (editing === "new" ? "" : editing?.id)).map((c) => ({ id: c.id, number: c.number }))}
           onSave={(c) => { onUpsert(c); setEditing(null); }}
           onClose={() => setEditing(null)}
+          onCreateCounterparty={onCreateCounterparty}
         />
       )}
     </div>

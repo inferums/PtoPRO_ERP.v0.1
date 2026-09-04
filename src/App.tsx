@@ -16,6 +16,7 @@ import {
   type ContractStatus,
   type Doc,
   type DocStatus,
+  type DocType,
   type Letter,
   type Own,
   type Party,
@@ -30,7 +31,7 @@ import Dashboard from "./components/Dashboard";
 import Documents from "./components/Documents";
 import DocumentForm from "./components/DocumentForm";
 import DocumentPreview from "./components/DocumentPreview";
-import Contracts from "./components/Contracts";
+import Contracts, { ContractForm } from "./components/Contracts";
 import ContractDetail from "./components/ContractDetail";
 import Finance from "./components/Finance";
 import PaymentForm from "./components/PaymentForm";
@@ -375,6 +376,7 @@ export default function App() {
   const [contractId, setContractId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Doc | null | "new">(null);
   const [partialFor, setPartialFor] = useState<Doc | null>(null);
+  const [subTemplate, setSubTemplate] = useState<Contract | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [installEvt, setInstallEvt] = useState<BIPEvent | null>(null);
   const [mobileMode, setMobileMode] = useState<boolean>(() => {
@@ -573,6 +575,36 @@ export default function App() {
     addPayment({ ...p, docId: partialFor.id });
     setPartialFor(null);
   };
+
+  /* шаблон документа из карточки договора: номер, контрагент и привязка подставляются сразу */
+  const makeDocTemplate = (type: DocType, contract: Contract): Doc => ({
+    id: uid(),
+    number: nextNumber(state.docs),
+    type,
+    status: "draft",
+    date: todayISO(),
+    counterpartyId: contract.counterpartyId,
+    contractId: contract.id,
+    items: [{ id: uid(), name: "", qty: 1, unit: "услуга", price: 0 }],
+    vat: false,
+  });
+
+  /* шаблон субдоговора из карточки договора: расходный, подчинённый, с теми же сроками */
+  const makeSubTemplate = (parent: Contract): Contract => ({
+    id: uid(),
+    number: "",
+    counterpartyId: parent.counterpartyId,
+    subject: "",
+    kind: "expense",
+    plannedIncome: 0,
+    plannedExpense: 0,
+    actualIncome: 0,
+    actualExpense: 0,
+    status: "active",
+    startDate: parent.startDate,
+    endDate: parent.endDate,
+    parentId: parent.id,
+  });
 
   const addLetter = (l: Letter) => {
     setState((st) => ({ ...st, letters: [...st.letters, l] }));
@@ -837,6 +869,8 @@ export default function App() {
                 onAddPayment={addPayment}
                 onUpdatePayment={updatePayment}
                 onDeletePayment={deletePayment}
+                onNewDoc={(type) => setEditing(makeDocTemplate(type, previewContract))}
+                onNewSubContract={() => setSubTemplate(makeSubTemplate(previewContract))}
               />
             ) : (
               <>
@@ -953,6 +987,17 @@ export default function App() {
           forcedType={view === "acts" ? "act" : view === "invoices" ? "invoice" : undefined}
           onSave={saveDoc}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {/* субдоговор из карточки договора */}
+      {subTemplate && (
+        <ContractForm
+          initial={subTemplate}
+          parties={state.parties}
+          parents={state.contracts.filter((c) => !c.parentId).map((c) => ({ id: c.id, number: c.number }))}
+          onSave={(c) => { upsertContract(c); setSubTemplate(null); }}
+          onClose={() => setSubTemplate(null)}
         />
       )}
 
