@@ -381,7 +381,7 @@ export default function DocumentPreview({
               )}
 
               <p className="mt-5 text-[11.5px] leading-relaxed text-ink">
-                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.representativePosition ? `, в лице ${party.representativePosition} ${party.representativeName ?? party.person ?? ""}` : party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора, соответствуют нормативным и установленным требованиям, в надлежащем порядке оформлены и переданы в полном объеме:
+                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.representativeFull ? `, в лице ${party.representativeFull}` : party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора, соответствуют нормативным и установленным требованиям, в надлежащем порядке оформлены и переданы в полном объеме:
               </p>
 
               <table className="mt-4 w-full border-collapse text-[11.5px]">
@@ -422,10 +422,10 @@ export default function DocumentPreview({
                 <div>
                   <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mut">Заказчик</p>
                   <p className="font-semibold">{party?.name ?? ""}</p>
-                  {party?.representativePosition && <p className="mt-0.5 text-mut">{party.representativePosition}</p>}
+                  {party?.representativeFull && <p className="mt-0.5 text-mut">{party.representativeFull}</p>}
                   <div className="mt-6">
                     <p className="border-b border-dotted border-ink pb-1" />
-                    <p className="mt-1 text-[10px] text-mut">{party?.representativeName ?? party?.person ?? "подпись / расшифровка"}</p>
+                    <p className="mt-1 text-[10px] text-mut">{party?.representativeFull ?? party?.person ?? "подпись / расшифровка"}</p>
                   </div>
                   <p className="mt-4 text-[10px] text-mut">М.П.</p>
                 </div>

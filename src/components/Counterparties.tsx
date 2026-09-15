@@ -54,13 +54,10 @@ export function CounterpartyForm({ initial, onSave, onClose }: { initial: Party 
         </div>
 
         {/* ─── представитель ─── */}
-        <div>
-          <label className={lbl}>Должность подписанта</label>
-          <input value={f.representativePosition ?? ""} onChange={(e) => setF({ ...f, representativePosition: e.target.value })} placeholder="Генеральный директор" className={inp} />
-        </div>
-        <div>
-          <label className={lbl}>ФИО подписанта</label>
-          <input value={f.representativeName ?? ""} onChange={(e) => setF({ ...f, representativeName: e.target.value })} placeholder="Иванов Иван Иванович" className={inp} />
+        <div className="sm:col-span-2">
+          <label className={lbl}>Представитель (в лице...)</label>
+          <input value={f.representativeFull ?? ""} onChange={(e) => setF({ ...f, representativeFull: e.target.value })} placeholder="Генерального директора Кутового Юрия Сергеевича" className={inp} />
+          <p className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.1em] text-dim">укажите полностью в родительном падеже — попадёт в акты и договоры</p>
         </div>
 
         {/* ─── банковские реквизиты ─── */}

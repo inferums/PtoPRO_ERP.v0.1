@@ -86,8 +86,7 @@ export type DbParty = {
   phone: string;
   email: string;
   person: string;
-  representative_position: string;
-  representative_name: string;
+  representative_full: string;
   bank: string;
   bik: string;
   account: string;

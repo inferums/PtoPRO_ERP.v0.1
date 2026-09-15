@@ -19,7 +19,7 @@ export function rowToParty(r: DbParty): Party {
     id: r.id, name: r.name, inn: r.inn || undefined, kpp: r.kpp || undefined, ogrn: r.ogrn || undefined,
     address: r.address || undefined, postalAddress: r.postal_address || undefined,
     phone: r.phone || undefined, email: r.email || undefined,
-    person: r.person || undefined, representativePosition: r.representative_position || undefined, representativeName: r.representative_name || undefined,
+    person: r.person || undefined, representativeFull: r.representative_full || undefined,
     bank: r.bank || undefined, bik: r.bik || undefined, account: r.account || undefined, corrAccount: r.corr_account || undefined,
   };
 }
@@ -29,7 +29,7 @@ export function partyToRow(p: Party, orgId: string): Partial<DbParty> {
     org_id: orgId, name: p.name, inn: p.inn ?? "", kpp: p.kpp ?? "", ogrn: p.ogrn ?? "",
     address: p.address ?? "", postal_address: p.postalAddress ?? "",
     phone: p.phone ?? "", email: p.email ?? "",
-    person: p.person ?? "", representative_position: p.representativePosition ?? "", representative_name: p.representativeName ?? "",
+    person: p.person ?? "", representative_full: p.representativeFull ?? "",
     bank: p.bank ?? "", bik: p.bik ?? "", account: p.account ?? "", corr_account: p.corrAccount ?? "",
   };
 }

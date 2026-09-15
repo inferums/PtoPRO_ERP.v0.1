@@ -36,8 +36,7 @@ export type Party = {
   phone?: string;
   email?: string;
   person?: string;
-  representativePosition?: string;
-  representativeName?: string;
+  representativeFull?: string;
   bank?: string;
   bik?: string;
   account?: string;
