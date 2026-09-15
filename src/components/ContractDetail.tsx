@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   calc,
   CONTRACT_KIND_META,
@@ -20,6 +20,7 @@ import {
 } from "../lib/store";
 import { ContractForm } from "./Contracts";
 import PaymentForm from "./PaymentForm";
+import { SignedFileSection } from "./DocumentPreview";
 import { IconArrow, IconCoin, IconDownload, IconLetter, IconPencil, IconPlus, IconPrint, IconTrash } from "./icons";
 
 /* расчёт фактических сумм по договору из платежей */
@@ -80,6 +81,8 @@ export default function ContractDetail({
   onAddPayment,
   onUpdatePayment,
   onDeletePayment,
+  orgId,
+  onSignedFileChange,
 }: {
   contract: Contract;
   party: Party | undefined;
@@ -98,6 +101,8 @@ export default function ContractDetail({
   onAddPayment: (p: Payment) => void;
   onUpdatePayment: (p: Payment) => void;
   onDeletePayment: (id: string) => void;
+  orgId: string;
+  onSignedFileChange: (url: string | null) => void;
 }) {
   const [tab, setTab] = useState<Tab>("card");
   const [editing, setEditing] = useState(false);
@@ -306,6 +311,18 @@ export default function ContractDetail({
                 </select>
               </div>
             </div>
+
+            {/* подписанный скан */}
+            <SignedFileSection
+              fileUrl={contract.signedFileUrl}
+              label={`Договор № ${contract.number}`}
+              onUpload={async (file) => {
+                const { uploadSignedFile } = await import("../lib/api");
+                const url = await uploadSignedFile(orgId, "contract", contract.id, file);
+                onSignedFileChange(url);
+              }}
+              onRemove={() => onSignedFileChange(null)}
+            />
           </div>
         </div>
       )}

@@ -1015,6 +1015,13 @@ export default function App() {
                 onAddPayment={addPayment}
                 onUpdatePayment={updatePayment}
                 onDeletePayment={deletePayment}
+                orgId={orgId}
+                onSignedFileChange={(url) => {
+                  const updated = { ...previewContract, signedFileUrl: url ?? undefined };
+                  setUserCtx((ctx) => ctx); // no-op to trigger re-render
+                  setState((st) => ({ ...st, contracts: st.contracts.map((c) => c.id === previewContract.id ? updated : c) }));
+                  apiUpsertContract(orgId, updated).catch(() => toast("Ошибка сохранения файла", "err"));
+                }}
               />
             ) : (
               <>
@@ -1142,6 +1149,12 @@ export default function App() {
               onAddPayment={addPayment}
               onUpdatePayment={updatePayment}
               onDeletePayment={deletePayment}
+              orgId={orgId}
+              onSignedFileChange={(url) => {
+                const updated = { ...previewDoc, signedFileUrl: url ?? undefined };
+                setState((st) => ({ ...st, docs: st.docs.map((d) => d.id === previewDoc.id ? updated : d) }));
+                apiUpsertDocument(orgId, updated).catch(() => toast("Ошибка сохранения файла", "err"));
+              }}
             />
           );
         })()}

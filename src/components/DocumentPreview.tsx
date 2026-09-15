@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ACT_STATUSES,
   amountInWords,
@@ -20,6 +20,58 @@ import {
 } from "../lib/store";
 import PaymentForm from "./PaymentForm";
 import { IconArrow, IconDownload, IconPencil, IconPrint, IconTrash, Logo } from "./icons";
+
+/* ─── подписанный скан ─────────────────────────────────────── */
+export function SignedFileSection({ fileUrl, label, onUpload, onRemove }: {
+  fileUrl?: string;
+  label: string;
+  onUpload: (file: File) => Promise<void>;
+  onRemove: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mut">Подписанный скан</p>
+      {fileUrl ? (
+        <div className="mt-2.5 flex items-center gap-2">
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2 text-[12px] font-medium text-brand transition-colors hover:bg-brand/10">
+            <IconDownload size={14} />
+            <span className="truncate">{label}</span>
+          </a>
+          <button onClick={() => { if (ref.current) ref.current.click(); }} className="cursor-pointer rounded-md border border-line p-2 text-mut transition-colors hover:border-brand hover:text-brand" title="Заменить файл">
+            <IconPencil size={13} />
+          </button>
+          <button onClick={onRemove} className="cursor-pointer rounded-md border border-line p-2 text-mut transition-colors hover:border-danger hover:text-danger" title="Удалить">
+            <IconTrash size={13} />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => ref.current?.click()}
+          disabled={uploading}
+          className="mt-2.5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-line px-4 py-3 font-mono text-[11px] uppercase tracking-[0.08em] text-mut transition-colors hover:border-brand hover:text-brand disabled:opacity-50"
+        >
+          {uploading ? "загрузка..." : "прикрепить файл"}
+        </button>
+      )}
+      <input
+        ref={ref}
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setUploading(true);
+          try { await onUpload(file); } finally { setUploading(false); }
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
 
 function Stamp({ date, short }: { date: string; short: string }) {
   return (
@@ -49,6 +101,8 @@ export default function DocumentPreview({
   onAddPayment,
   onUpdatePayment,
   onDeletePayment,
+  orgId,
+  onSignedFileChange,
 }: {
   doc: Doc;
   party: Party | undefined;
@@ -63,6 +117,8 @@ export default function DocumentPreview({
   onAddPayment: (p: Payment) => void;
   onUpdatePayment: (p: Payment) => void;
   onDeletePayment: (id: string) => void;
+  orgId: string;
+  onSignedFileChange: (url: string | null) => void;
 }) {
   const meta = STATUS_META[doc.status];
   const { subtotal, vat, total } = calc(doc);
@@ -516,6 +572,18 @@ export default function DocumentPreview({
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-70">текущий статус</p>
               <p className="mt-1 font-display text-[14px] font-bold">{meta.label}</p>
             </div>
+
+            {/* подписанный скан */}
+            <SignedFileSection
+              fileUrl={doc.signedFileUrl}
+              label={`${TYPE_META[doc.type]?.label ?? "Документ"} № ${doc.number}`}
+              onUpload={async (file) => {
+                const { uploadSignedFile } = await import("../lib/api");
+                const url = await uploadSignedFile(orgId, "document", doc.id, file);
+                onSignedFileChange(url);
+              }}
+              onRemove={() => onSignedFileChange(null)}
+            />
           </div>}
         </div>
       </div>

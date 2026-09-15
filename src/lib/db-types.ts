@@ -113,6 +113,7 @@ export type DbContract = {
   end_date: string;
   parent_id: string | null;
   description: string;
+  signed_file_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -129,6 +130,7 @@ export type DbDocument = {
   vat: boolean;
   note: string;
   bank_account: string | null; // JSON: DocBankAccount
+  signed_file_url: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -22,7 +22,8 @@ export type Doc = {
   items: LineItem[];
   vat: boolean;
   note?: string;
-  bankAccount?: DocBankAccount; // заморозленные реквизиты счёта на момент создания
+  bankAccount?: DocBankAccount; // заморозженные реквизиты счёта на момент создания
+  signedFileUrl?: string; // URL подписанного скана
 };
 
 export type Party = {
@@ -84,6 +85,7 @@ export type Contract = {
   endDate: string;
   parentId?: string; // субдоговор
   description?: string;
+  signedFileUrl?: string; // URL подписанного скана
 };
 
 export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;

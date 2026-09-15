@@ -40,6 +40,7 @@ export function rowToContract(r: DbContract): Contract {
     kind: r.kind, plannedIncome: r.planned_income, plannedExpense: r.planned_expense,
     actualIncome: r.actual_income, actualExpense: r.actual_expense, status: r.status,
     startDate: r.start_date, endDate: r.end_date, parentId: r.parent_id ?? undefined, description: r.description || undefined,
+    signedFileUrl: r.signed_file_url || undefined,
   };
 }
 
@@ -49,6 +50,7 @@ export function contractToRow(c: Contract, orgId: string): Partial<DbContract> {
     kind: c.kind, planned_income: c.plannedIncome, planned_expense: c.plannedExpense,
     actual_income: c.actualIncome, actual_expense: c.actualExpense, status: c.status,
     start_date: c.startDate, end_date: c.endDate, parent_id: c.parentId ?? null, description: c.description ?? "",
+    signed_file_url: c.signedFileUrl ?? null,
   };
 }
 
@@ -58,6 +60,7 @@ export function rowToDoc(r: DbDocument, items: DbDocumentItem[]): Doc {
     counterpartyId: r.counterparty_id ?? "", contractId: r.contract_id ?? undefined,
     vat: r.vat, note: r.note || undefined,
     bankAccount: r.bank_account ? JSON.parse(r.bank_account) : undefined,
+    signedFileUrl: r.signed_file_url || undefined,
     items: items.sort((a, b) => a.sort_order - b.sort_order).map((it) => ({
       id: it.id, name: it.name, qty: it.qty, unit: it.unit, price: it.price,
     })),
@@ -70,6 +73,7 @@ export function docToRows(doc: Doc, orgId: string): { document: Partial<DbDocume
       org_id: orgId, number: doc.number, type: doc.type, status: doc.status, date: doc.date,
       counterparty_id: doc.counterpartyId || null, contract_id: doc.contractId ?? null, vat: doc.vat, note: doc.note ?? "",
       bank_account: doc.bankAccount ? JSON.stringify(doc.bankAccount) : null,
+      signed_file_url: doc.signedFileUrl ?? null,
     },
     items: doc.items.map((it, i) => ({
       name: it.name, qty: it.qty, unit: it.unit, price: it.price, sort_order: i,
@@ -203,6 +207,25 @@ export async function uploadLogo(orgId: string, file: File): Promise<string> {
   const { error: updateError } = await supabase.from("organizations").update({ logo_url: publicUrl }).eq("id", orgId);
   if (updateError) throw updateError;
   return publicUrl;
+}
+
+/* ─── signed file uploads ──────────────────────────────────── */
+
+export async function uploadSignedFile(orgId: string, entityType: "document" | "contract", entityId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop() || "pdf";
+  const path = `${orgId}/${entityType}/${entityId}.${ext}`;
+  const { error } = await supabase.storage.from("signed_files").upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from("signed_files").getPublicUrl(path);
+  return publicUrl;
+}
+
+export async function deleteSignedFile(orgId: string, entityType: "document" | "contract", entityId: string) {
+  const { data: files } = await supabase.storage.from("signed_files").list(`${orgId}/${entityType}`);
+  const match = files?.find((f) => f.name.startsWith(entityId));
+  if (match) {
+    await supabase.storage.from("signed_files").remove([`${orgId}/${entityType}/${match.name}`]);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
