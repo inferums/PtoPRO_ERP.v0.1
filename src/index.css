@@ -98,28 +98,25 @@ body {
 
 @media print {
   @page { size: A4; margin: 12mm; }
-  body { background: #fff !important; }
-  body * { visibility: hidden; }
-  #print-sheet, #print-sheet * { visibility: visible; }
-  /* print-sheet — без рамок, теней, фиксированной позиции */
-  #print-sheet {
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+
+  /* скрыть сайдбар, мобильную шапку, основной контент */
+  aside, nav, main > div > div:first-child,
+  .pointer-events-none { display: none !important; }
+
+  /* overlay и модалка — прозрачные, без позиционирования */
+  .overlay-in {
     position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
-    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    background: none !important;
     padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    overflow: visible !important;
+    margin: 0 !important;
   }
-  /* предки print-sheet — без overflow/transform/clip, без фона */
-  .overlay-in, .modal-in,
-  .overlay-in > div, .modal-in > div {
+  .modal-in, .modal-in > div {
     position: static !important;
+    display: block !important;
     overflow: visible !important;
-    height: auto !important;
-    max-height: none !important;
     background: none !important;
     border: none !important;
     box-shadow: none !important;
@@ -128,12 +125,42 @@ body {
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
   }
-  /* скрыть тулбар и панель оплат */
+
+  /* grid-обёртка — одна колонка */
+  .modal-in > div > .grid {
+    display: block !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  /* print-sheet — единственный видимый элемент */
+  #print-sheet {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: #fff !important;
+  }
+  #print-sheet * {
+    visibility: visible !important;
+    overflow: visible !important;
+  }
+
+  /* скрыть тулбар, панель оплат, секцию скана, модалку платежей */
   .overlay-in > div:first-child,
-  .overlay-in > div > .space-y-3 {
-    display: none !important;
-  }
+  .space-y-3,
+  .rounded-xl.border.border-line.bg-surface.p-4 { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
