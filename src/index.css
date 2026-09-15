@@ -100,11 +100,10 @@ body {
   @page { size: A4; margin: 12mm; }
   body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
 
-  /* скрыть сайдбар, мобильную шапку, основной контент */
-  aside, nav, main > div > div:first-child,
-  .pointer-events-none { display: none !important; }
+  /* скрыть сайдбар, мобильную шапку, основной контент — всё кроме модалки */
+  aside, main, div.sticky { display: none !important; }
 
-  /* overlay и модалка — прозрачные, без позиционирования */
+  /* overlay модалки — прозрачный, без позиционирования */
   .overlay-in {
     position: static !important;
     display: block !important;
@@ -112,8 +111,11 @@ body {
     background: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    inset: auto !important;
   }
-  .modal-in, .modal-in > div {
+
+  /* карточка модалки — без рамок, теней, overflow */
+  .modal-in {
     position: static !important;
     display: block !important;
     overflow: visible !important;
@@ -127,16 +129,20 @@ body {
     max-width: 100% !important;
     height: auto !important;
     max-height: none !important;
+    border-radius: 0 !important;
   }
 
-  /* grid-обёртка — одна колонка */
-  .modal-in > div > .grid {
+  /* тулбар модалки — скрыть */
+  .modal-in > div:first-child { display: none !important; }
+
+  /* grid-обёртка — одна колонка, без отступов */
+  .modal-in > .grid {
     display: block !important;
     padding: 0 !important;
     gap: 0 !important;
   }
 
-  /* print-sheet — единственный видимый элемент */
+  /* print-sheet — единственный видимый контент */
   #print-sheet {
     display: block !important;
     position: static !important;
@@ -157,10 +163,8 @@ body {
     overflow: visible !important;
   }
 
-  /* скрыть тулбар, панель оплат, секцию скана, модалку платежей */
-  .overlay-in > div:first-child,
-  .space-y-3,
-  .rounded-xl.border.border-line.bg-surface.p-4 { display: none !important; }
+  /* скрыть панель оплат, секцию скана, модалку платежей */
+  .space-y-3 { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
