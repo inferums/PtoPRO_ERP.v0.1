@@ -167,6 +167,8 @@ export default function DocumentPreview({
               </div>
             </div>
 
+            {/* ====== СЧЁТ ====== */}
+            {doc.type === "invoice" && (<>
             {/* банковские реквизиты */}
             {(() => { const ba = doc.bankAccount ?? getDefaultAccount(own); return ba ? (
             <table className="mt-4 w-full border-collapse text-[10.5px] leading-snug">
@@ -200,12 +202,10 @@ export default function DocumentPreview({
             </table>
             ) : null; })()}
 
-            {/* заголовок */}
             <h2 className="mt-6 text-center text-[17px] font-bold text-ink">
-              {TYPE_META[doc.type]?.title ?? "Документ"} № {doc.number} от {fmtDate(doc.date)} г.
+              СЧЁТ НА ОПЛАТУ № {doc.number} от {fmtDate(doc.date)} г.
             </h2>
 
-            {/* поставщик / покупатель / основание */}
             <table className="mt-4 w-full border-collapse text-[11.5px] leading-relaxed">
               <tbody>
                 <tr>
@@ -230,7 +230,6 @@ export default function DocumentPreview({
               </tbody>
             </table>
 
-            {/* позиции с колонкой НДС */}
             <table className="mt-4 w-full border-collapse text-[11.5px]">
               <thead>
                 <tr className="bg-soft">
@@ -256,7 +255,6 @@ export default function DocumentPreview({
               </tbody>
             </table>
 
-            {/* итоги */}
             <div className="ml-auto mt-3 w-80 text-[12px]">
               <p className="flex justify-between border-b border-line py-1.5"><span className="text-mut">Итого:</span><span className="font-mono font-semibold">{fmtMoney(subtotal)}</span></p>
               <p className="flex justify-between border-b border-line py-1.5">
@@ -296,17 +294,12 @@ export default function DocumentPreview({
             </div>
 
             <div className="mt-10 flex items-end justify-between gap-4 border-t-2 border-ink pt-4">
-              {/* фирменная печать */}
               <svg width="86" height="86" viewBox="0 0 100 100" className="shrink-0 -rotate-12 opacity-80" aria-hidden="true">
                 <circle cx="50" cy="50" r="47" fill="none" stroke="#2743c7" strokeWidth="2.5" />
                 <circle cx="50" cy="50" r="36" fill="none" stroke="#2743c7" strokeWidth="1.5" />
                 <circle cx="50" cy="50" r="20" fill="none" stroke="#2743c7" strokeWidth="1" />
-                <text x="50" y="47" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2743c7" fontFamily="Arial">
-                  {own.short}
-                </text>
-                <text x="50" y="57" textAnchor="middle" fontSize="5.5" fill="#2743c7" fontFamily="Arial">
-                  ДЛЯ ДОКУМЕНТОВ
-                </text>
+                <text x="50" y="47" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2743c7" fontFamily="Arial">{own.short}</text>
+                <text x="50" y="57" textAnchor="middle" fontSize="5.5" fill="#2743c7" fontFamily="Arial">ДЛЯ ДОКУМЕНТОВ</text>
               </svg>
               <div className="min-w-0 flex-1 text-right">
                 <p className="font-display text-[11px] font-bold tracking-[0.08em] text-ink">{own.short}</p>
@@ -315,6 +308,88 @@ export default function DocumentPreview({
                 </p>
               </div>
             </div>
+            </>)}
+
+            {/* ====== АКТ ====== */}
+            {doc.type === "act" && (() => {
+              const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+              const dt = new Date(`${doc.date}T12:00:00`);
+              const day = dt.getDate().toString().padStart(2, "0");
+              const month = MONTHS[dt.getMonth()] ?? "";
+              const year = dt.getFullYear();
+              return (<>
+              <h2 className="mt-6 text-center text-[15px] font-bold text-ink">
+                Акт № {doc.number} от &laquo;{day}&raquo; {month} {year} г.
+              </h2>
+              <p className="mt-1 text-center text-[13px] text-ink">сдачи-приемки услуг</p>
+              {contract && (
+                <p className="mt-1 text-center text-[12px] text-mut">
+                  к Договору № {contract.number} от &laquo;{new Date(`${contract.startDate}T12:00:00`).getDate().toString().padStart(2,"0")}&raquo; {MONTHS[new Date(`${contract.startDate}T12:00:00`).getMonth()] ?? ""} {new Date(`${contract.startDate}T12:00:00`).getFullYear()} г.
+                </p>
+              )}
+
+              <p className="mt-5 text-[11.5px] leading-relaxed text-ink">
+                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора:
+              </p>
+
+              <table className="mt-4 w-full border-collapse text-[11.5px]">
+                <thead>
+                  <tr className="bg-soft">
+                    {["№", "Вид работ", "Сумма (руб.)"].map((h, i) => (
+                      <th key={h} className={`border border-ink/60 px-2 py-2 font-mono text-[9.5px] font-semibold uppercase tracking-[0.06em] text-mut ${i === 1 ? "text-left" : "text-center"}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {doc.items.map((it, i) => (
+                    <tr key={it.id}>
+                      <td className="border border-ink/60 px-2 py-2 text-center font-mono text-mut">{i + 1}</td>
+                      <td className="border border-ink/60 px-2 py-2">{it.name}</td>
+                      <td className="border border-ink/60 px-2 py-2 text-right font-mono font-semibold">{fmtMoney(it.qty * it.price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="ml-auto mt-3 w-80 text-[12px]">
+                <p className="flex justify-between border-b border-line py-1.5"><span className="text-mut">Всего выполнено работ:</span><span className="font-mono font-semibold">{fmtMoney(subtotal)}</span></p>
+                <p className="flex justify-between py-2 text-[13px] font-bold">
+                  <span>{doc.vat ? "В т.ч. НДС 20%:" : "Без НДС"}</span>
+                  <span className="font-mono">{doc.vat ? fmtMoney(vat) : "—"}</span>
+                </p>
+                <p className="flex justify-between py-2 text-[14px] font-bold border-t border-line">
+                  <span>Итого к оплате:</span><span className="font-mono">{fmtMoney(total)}</span>
+                </p>
+              </div>
+
+              <p className="mt-6 text-[12px] italic text-mut">
+                Стоимость выполненных работ по настоящему акту составляет: {amountInWords(total)}.
+              </p>
+
+              <div className="mt-14 grid grid-cols-2 gap-8 text-[11.5px]">
+                <div>
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mut">Заказчик</p>
+                  <p className="font-semibold">{party?.name ?? ""}</p>
+                  {party?.person && <p className="mt-0.5 text-mut">{party.person}</p>}
+                  <div className="mt-6">
+                    <p className="border-b border-dotted border-ink pb-1" />
+                    <p className="mt-1 text-[10px] text-mut">подпись / расшифровка</p>
+                  </div>
+                  <p className="mt-4 text-[10px] text-mut">М.П.</p>
+                </div>
+                <div>
+                  <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mut">Исполнитель</p>
+                  <p className="font-semibold">{displayName(own.name)}</p>
+                  <p className="mt-0.5 text-mut">{personName(own.name)}</p>
+                  <div className="mt-6">
+                    <p className="border-b border-dotted border-ink pb-1" />
+                    <p className="mt-1 text-[10px] text-mut">подпись / расшифровка</p>
+                  </div>
+                  <p className="mt-4 text-[10px] text-mut">М.П.</p>
+                </div>
+              </div>
+              </>);
+            })()}
           </div>
 
           {/* панель оплат — только для счетов */}
