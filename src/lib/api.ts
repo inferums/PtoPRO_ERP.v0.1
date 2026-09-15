@@ -227,7 +227,10 @@ export async function fetchContracts(orgId: string): Promise<Contract[]> {
 export async function upsertContract(orgId: string, contract: Contract) {
   const row = contractToRow(contract, orgId);
   const { error } = await supabase.from("contracts").upsert({ ...row, id: contract.id });
-  if (error) throw error;
+  if (error) {
+    console.error("[PtoPRO] upsertContract error:", error, "contract:", contract, "row:", row);
+    throw error;
+  }
 }
 
 export async function deleteContract(id: string) {
@@ -264,8 +267,11 @@ export async function fetchDocuments(orgId: string): Promise<Doc[]> {
 export async function upsertDocument(orgId: string, doc: Doc) {
   const { document: docRow, items: itemRows } = docToRows(doc, orgId);
 
-  const { error: docError } = await supabase.from("documents").upsert({ ...docRow, id: doc.id });
-  if (docError) throw docError;
+  const { data, error: docError } = await supabase.from("documents").upsert({ ...docRow, id: doc.id }).select();
+  if (docError) {
+    console.error("[PtoPRO] upsertDocument error:", docError, "doc:", doc, "row:", docRow);
+    throw docError;
+  }
 
   await supabase.from("document_items").delete().eq("document_id", doc.id);
   if (itemRows.length > 0) {
@@ -292,7 +298,10 @@ export async function fetchPayments(orgId: string): Promise<Payment[]> {
 export async function upsertPayment(orgId: string, payment: Payment) {
   const row = paymentToRow(payment, orgId);
   const { error } = await supabase.from("payments").upsert({ ...row, id: payment.id });
-  if (error) throw error;
+  if (error) {
+    console.error("[PtoPRO] upsertPayment error:", error, "payment:", payment, "row:", row);
+    throw error;
+  }
 }
 
 export async function deletePayment(id: string) {
