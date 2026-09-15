@@ -142,14 +142,15 @@ body {
     gap: 0 !important;
   }
 
-  /* print-sheet — единственный видимый контент */
+  /* print-sheet — А4 ширина, единственный видимый контент */
   #print-sheet {
     display: block !important;
     position: static !important;
     width: 100% !important;
+    max-width: 186mm !important; /* A4 minus margins */
     height: auto !important;
     max-height: none !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
@@ -163,8 +164,15 @@ body {
     overflow: visible !important;
   }
 
-  /* скрыть панель оплат, секцию скана, модалку платежей */
+  /* скрыть панель оплат, секцию скана */
   .space-y-3 { display: none !important; }
+
+  /* логотип — принудительная видимость текста при печати */
+  #print-sheet svg text {
+    fill: #108FD1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
