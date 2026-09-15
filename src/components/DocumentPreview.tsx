@@ -329,8 +329,55 @@ export default function DocumentPreview({
               )}
 
               <p className="mt-5 text-[11.5px] leading-relaxed text-ink">
-                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора:
+                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.representativePosition ? `, в лице ${party.representativePosition} ${party.representativeName ?? party.person ?? ""}` : party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора:
               </p>
+
+              {/* реквизиты сторон */}
+              <table className="mt-4 w-full border-collapse text-[10px] leading-snug">
+                <thead>
+                  <tr>
+                    <th className="border border-ink/60 bg-soft px-2 py-1.5 text-left font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-mut" width="50%">Заказчик</th>
+                    <th className="border border-ink/60 bg-soft px-2 py-1.5 text-left font-mono text-[9px] font-bold uppercase tracking-[0.08em] text-mut" width="50%">Исполнитель</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-ink/60 px-2 py-1.5 align-top">
+                      <p className="font-semibold text-[10.5px]">{party?.name ?? ""}</p>
+                      {party?.address && <p className="mt-0.5 text-mut">Адрес: {party.address}</p>}
+                      {party?.postalAddress && <p className="text-mut">Почт. адрес: {party.postalAddress}</p>}
+                      {party?.phone && <p className="text-mut">Тел.: {party.phone}</p>}
+                      {party?.email && <p className="text-mut">Email: {party.email}</p>}
+                      {party?.inn && <p>ИНН {party.inn}{party?.kpp ? `, КПП ${party.kpp}` : ""}</p>}
+                      {party?.ogrn && <p>ОГРН {party.ogrn}</p>}
+                    </td>
+                    <td className="border border-ink/60 px-2 py-1.5 align-top">
+                      <p className="font-semibold text-[10.5px]">{displayName(own.name)}</p>
+                      {own.address && <p className="mt-0.5 text-mut">Адрес: {own.address}</p>}
+                      {own.phone && <p className="text-mut">Тел.: {own.phone}</p>}
+                      {own.email && <p className="text-mut">Email: {own.email}</p>}
+                      {own.inn && <p>ИНН {own.inn}</p>}
+                      {own.website && <p>Сайт: {own.website}</p>}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-ink/60 px-2 py-1.5 align-top">
+                      {party?.bank && <p><span className="text-dim">Банк:</span> {party.bank}</p>}
+                      {party?.account && <p><span className="text-dim">Р/с:</span> {party.account}</p>}
+                      {party?.corrAccount && <p><span className="text-dim">К/с:</span> {party.corrAccount}</p>}
+                      {party?.bik && <p><span className="text-dim">БИК:</span> {party.bik}</p>}
+                    </td>
+                    <td className="border border-ink/60 px-2 py-1.5 align-top">
+                      {(() => { const ba = doc.bankAccount ?? getDefaultAccount(own); return ba ? (<>
+                        <p><span className="text-dim">Банк:</span> {ba.bank}</p>
+                        <p><span className="text-dim">Р/с:</span> {ba.account}</p>
+                        {ba.corrAccount && <p><span className="text-dim">К/с:</span> {ba.corrAccount}</p>}
+                        <p><span className="text-dim">БИК:</span> {ba.bik}</p>
+                      </>) : <p className="text-mut">не заполнены</p>; })()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
               <table className="mt-4 w-full border-collapse text-[11.5px]">
                 <thead>
@@ -370,10 +417,10 @@ export default function DocumentPreview({
                 <div>
                   <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-mut">Заказчик</p>
                   <p className="font-semibold">{party?.name ?? ""}</p>
-                  {party?.person && <p className="mt-0.5 text-mut">{party.person}</p>}
+                  {party?.representativePosition && <p className="mt-0.5 text-mut">{party.representativePosition}</p>}
                   <div className="mt-6">
                     <p className="border-b border-dotted border-ink pb-1" />
-                    <p className="mt-1 text-[10px] text-mut">подпись / расшифровка</p>
+                    <p className="mt-1 text-[10px] text-mut">{party?.representativeName ?? party?.person ?? "подпись / расшифровка"}</p>
                   </div>
                   <p className="mt-4 text-[10px] text-mut">М.П.</p>
                 </div>

@@ -10,29 +10,73 @@ export function CounterpartyForm({ initial, onSave, onClose }: { initial: Party 
   const lbl = "mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut";
 
   return (
-    <Modal title={initial ? "Контрагент" : "Новый контрагент"} subtitle={initial ? "редактирование" : "карточка в базе"} onClose={onClose} width="max-w-2xl">
+    <Modal title={initial ? "Контрагент" : "Новый контрагент"} subtitle={initial ? "редактирование" : "карточка в базе"} onClose={onClose} width="max-w-3xl">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className={lbl}>Наименование</label>
-          <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ООО «Ромашка»" className={inp} />
+          <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder='ООО «Ромашка»' className={inp} />
         </div>
+
+        {/* ─── общие реквизиты ─── */}
         <div>
           <label className={lbl}>ИНН</label>
           <input value={f.inn ?? ""} onChange={(e) => setF({ ...f, inn: e.target.value })} className={inp} />
         </div>
         <div>
+          <label className={lbl}>КПП</label>
+          <input value={f.kpp ?? ""} onChange={(e) => setF({ ...f, kpp: e.target.value })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>ОГРН</label>
+          <input value={f.ogrn ?? ""} onChange={(e) => setF({ ...f, ogrn: e.target.value })} className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Телефон</label>
+          <input value={f.phone ?? ""} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="+7 (812) 309-18-68" className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>Email</label>
+          <input value={f.email ?? ""} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="info@company.ru" className={inp} />
+        </div>
+        <div>
           <label className={lbl}>Контактное лицо</label>
           <input value={f.person ?? ""} onChange={(e) => setF({ ...f, person: e.target.value })} className={inp} />
         </div>
+
+        {/* ─── адреса ─── */}
+        <div className="sm:col-span-2">
+          <label className={lbl}>Юридический адрес</label>
+          <input value={f.address ?? ""} onChange={(e) => setF({ ...f, address: e.target.value })} className={inp} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={lbl}>Почтовый адрес</label>
+          <input value={f.postalAddress ?? ""} onChange={(e) => setF({ ...f, postalAddress: e.target.value })} className={inp} />
+        </div>
+
+        {/* ─── представитель ─── */}
+        <div>
+          <label className={lbl}>Должность подписанта</label>
+          <input value={f.representativePosition ?? ""} onChange={(e) => setF({ ...f, representativePosition: e.target.value })} placeholder="Генеральный директор" className={inp} />
+        </div>
+        <div>
+          <label className={lbl}>ФИО подписанта</label>
+          <input value={f.representativeName ?? ""} onChange={(e) => setF({ ...f, representativeName: e.target.value })} placeholder="Иванов Иван Иванович" className={inp} />
+        </div>
+
+        {/* ─── банковские реквизиты ─── */}
         <div className="sm:col-span-2">
           <label className={lbl}>Банк</label>
-          <input value={f.bank ?? ""} onChange={(e) => setF({ ...f, bank: e.target.value })} className={inp} />
+          <input value={f.bank ?? ""} onChange={(e) => setF({ ...f, bank: e.target.value })} placeholder='ФИЛИАЛ "ЦЕНТРАЛЬНЫЙ" БАНКА ВТБ (ПАО)' className={inp} />
         </div>
         <div>
           <label className={lbl}>БИК</label>
           <input value={f.bik ?? ""} onChange={(e) => setF({ ...f, bik: e.target.value })} className={inp} />
         </div>
         <div>
+          <label className={lbl}>Корр. счёт</label>
+          <input value={f.corrAccount ?? ""} onChange={(e) => setF({ ...f, corrAccount: e.target.value })} className={inp} />
+        </div>
+        <div className="sm:col-span-2">
           <label className={lbl}>Расчётный счёт</label>
           <input value={f.account ?? ""} onChange={(e) => setF({ ...f, account: e.target.value })} className={inp} />
         </div>

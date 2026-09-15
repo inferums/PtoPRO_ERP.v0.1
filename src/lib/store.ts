@@ -29,10 +29,19 @@ export type Party = {
   id: string;
   name: string;
   inn?: string;
+  kpp?: string;
+  ogrn?: string;
+  address?: string;
+  postalAddress?: string;
+  phone?: string;
+  email?: string;
   person?: string;
+  representativePosition?: string;
+  representativeName?: string;
   bank?: string;
   bik?: string;
   account?: string;
+  corrAccount?: string;
 };
 
 export type BankAccount = {
