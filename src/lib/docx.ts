@@ -241,7 +241,7 @@ export async function downloadContractDocx(
 ) {
   const paidTotal = payments.reduce((s, p) => s + p.amount, 0);
   const baseTotal = contract.plannedIncome || docs.reduce((s, d) => s + calc(d).total, 0);
-  const ba = getDefaultAccount(own)!;
+  const ba = getDefaultAccount(own);
 
   /* рассчитываем фактические суммы из платежей */
   const actualIncome = contract.kind === "income" ? paidTotal : 0;
@@ -346,8 +346,8 @@ export async function downloadContractDocx(
     new Paragraph({ spacing: { before: 200, after: 100 }, children: [run("5. Заключительные положения", { bold: true })] }),
     new Paragraph({ spacing: { after: 80 }, children: [run("5.1. Договор составлен в двух экземплярах, имеющих одинаковую юридическую силу.")] }),
     new Paragraph({ spacing: { before: 600 }, children: [run(`Исполнитель: ${displayName(own.name)}`, { bold: true })] }),
-    new Paragraph({ children: [run(`ИНН ${own.inn ?? "—"} · ${ba.bank}`, { color: GREY })] }),
-    new Paragraph({ children: [run(`БИК ${ba.bik} · р/с ${ba.account}`, { color: GREY })] }),
+    new Paragraph({ children: [run(`ИНН ${own.inn ?? "—"}${ba ? ` · ${ba.bank}` : ""}`, { color: GREY })] }),
+    new Paragraph({ children: [run(ba ? `БИК ${ba.bik} · р/с ${ba.account}` : "", { color: GREY })] }),
     new Paragraph({ spacing: { before: 300 }, children: [run("______________ / " + own.director)] }),
     new Paragraph({ spacing: { before: 400 }, children: [run(`Заказчик: ${party?.name ?? "____________________"}`, { bold: true })] }),
     new Paragraph({ children: [run(`ИНН ${party?.inn ?? "—"}`, { color: GREY })] }),

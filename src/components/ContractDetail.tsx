@@ -131,8 +131,13 @@ export default function ContractDetail({
   const status = CONTRACT_STATUS_META[contract.status];
 
   const downloadWord = async () => {
-    const { downloadContractDocx } = await import("../lib/docx");
-    await downloadContractDocx(contract, party, own, docs, payments);
+    try {
+      const { downloadContractDocx } = await import("../lib/docx");
+      await downloadContractDocx(contract, party, own, docs, payments);
+    } catch (e) {
+      console.error("[PtoPRO] Word export error:", e);
+      alert("Ошибка экспорта в Word: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const tabs: { id: Tab; label: string; count?: number }[] = [

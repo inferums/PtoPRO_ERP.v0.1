@@ -101,27 +101,39 @@ body {
   body { background: #fff !important; }
   body * { visibility: hidden; }
   #print-sheet, #print-sheet * { visibility: visible; }
-  /* print-sheet — на весь экран, без теней и рамок */
+  /* print-sheet — без рамок, теней, фиксированной позиции */
   #print-sheet {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: static !important;
     width: 100% !important;
     height: auto !important;
     max-height: none !important;
     margin: 0 !important;
-    padding: 12mm !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     overflow: visible !important;
-    z-index: 99999 !important;
   }
-  /* все предки print-sheet — без overflow, без transform, без clip */
-  #print-sheet, #print-sheet * { overflow: visible !important; }
-  /* скрыть всё кроме print-sheet */
-  .overlay-in > div:first-child /* тулбар */,
-  .overlay-in > div > .space-y-3 /* панель оплат */
-  { display: none !important; }
+  /* предки print-sheet — без overflow/transform/clip, без фона */
+  .overlay-in, .modal-in,
+  .overlay-in > div, .modal-in > div {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  /* скрыть тулбар и панель оплат */
+  .overlay-in > div:first-child,
+  .overlay-in > div > .space-y-3 {
+    display: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
