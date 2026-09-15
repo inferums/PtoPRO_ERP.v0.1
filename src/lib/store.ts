@@ -350,8 +350,11 @@ export function plural(n: number, f: [string, string, string]): string {
 }
 
 /* «ИП Иванов» — без двойного префикса */
-export const displayName = (name: string) =>
-  name.trim().toLowerCase().startsWith("ип ") || name.trim().toLowerCase() === "ип" ? name.trim() : `ИП ${name.trim()}`;
+export const displayName = (name: string) => {
+  const lower = name.trim().toLowerCase();
+  if (lower.startsWith("ип ") || lower === "ип" || lower.startsWith("индивидуальный предприниматель")) return name.trim();
+  return `ИП ${name.trim()}`;
+};
 
 /* Полное ФИО без префиксов «ИП» / «Индивидуальный предприниматель» — для строки «Бухгалтер …» */
 export const personName = (name: string) =>
