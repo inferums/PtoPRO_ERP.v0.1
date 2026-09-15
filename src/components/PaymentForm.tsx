@@ -22,8 +22,8 @@ export default function PaymentForm({
   onClose,
 }: {
   title: string;
-  docs?: DocOption[]; // список документов для привязки; undefined — документ не выбирается
-  initial?: Payment | null; // режим редактирования
+  docs?: DocOption[];
+  initial?: Payment | null;
   defaultAmount?: number;
   info?: React.ReactNode;
   onSave: (p: Payment) => void;
@@ -38,6 +38,7 @@ export default function PaymentForm({
   const [method, setMethod] = useState(initial?.method ?? METHODS[0]);
   const [name, setName] = useState(initial?.name ?? (docId ? sel?.suggestedName ?? "" : ""));
   const [nameTouched, setNameTouched] = useState(!!initial?.name);
+  const [direction, setDirection] = useState<"income" | "expense">(initial?.direction ?? "income");
 
   const pick = (id: string) => {
     setDocId(id);
@@ -54,6 +55,30 @@ export default function PaymentForm({
         {info && <div className="mb-4 rounded-lg border border-line bg-soft px-3.5 py-2.5 text-[12.5px] leading-relaxed text-mut">{info}</div>}
 
         <div className="grid gap-3.5">
+          <div>
+            <label className={LBL}>Тип операции</label>
+            <div className="grid grid-cols-2 gap-1 border border-line bg-soft p-1">
+              <button
+                type="button"
+                onClick={() => setDirection("income")}
+                className={`cursor-pointer px-3 py-2 font-mono text-[11.5px] uppercase tracking-[0.08em] transition-all ${
+                  direction === "income" ? "bg-white font-semibold text-[#2E7D32] shadow-sm" : "text-mut hover:text-ink"
+                }`}
+              >
+                ↓ Доход
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirection("expense")}
+                className={`cursor-pointer px-3 py-2 font-mono text-[11.5px] uppercase tracking-[0.08em] transition-all ${
+                  direction === "expense" ? "bg-white font-semibold text-[#C62828] shadow-sm" : "text-mut hover:text-ink"
+                }`}
+              >
+                ↑ Расход
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className={LBL}>Наименование</label>
             <input
@@ -113,7 +138,7 @@ export default function PaymentForm({
       <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
         <button onClick={onClose} className={BTN_GHOST}>отмена</button>
         <button
-          onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, date, amount, method, name: name.trim() || "Оплата" })}
+          onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, date, amount, method, name: name.trim() || "Оплата", direction })}
           className={BTN_PRIMARY}
         >
           сохранить

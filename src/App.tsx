@@ -547,13 +547,16 @@ export default function App() {
     const doc = state.docs.find((d) => d.id === id);
     if (!doc) return;
 
+    /* акты: только draft / sent / signed — без оплат */
+    if (doc.type === "act" && (s === "paid" || s === "paid_partial")) return;
+
     if (s === "paid") {
       const total = doc.items.reduce((sm, it) => sm + it.qty * it.price, 0);
       const paidSum = state.payments.filter((p) => p.docId === id).reduce((sm, p) => sm + p.amount, 0);
       const rest = Math.max(total - paidSum, 0);
       const contract = state.contracts.find((c) => c.id === doc.contractId);
       const autoName = suggestPaymentName(doc, contract);
-      const autoPayment = rest > 0 ? { id: uid(), docId: id, date: todayISO(), amount: rest, method: "Банковский перевод", name: autoName } : null;
+      const autoPayment = rest > 0 ? { id: uid(), docId: id, date: todayISO(), amount: rest, method: "Банковский перевод", name: autoName, direction: "income" as const } : null;
 
       setState((st) => ({
         ...st,
@@ -659,27 +662,53 @@ export default function App() {
   const addPayment = (p: Payment) => {
     setState((st) => {
       const doc = st.docs.find((d) => d.id === p.docId);
-      const docTotal = doc ? doc.items.reduce((s, it) => s + it.qty * it.price, 0) : Infinity;
-      const alreadyPaid = st.payments.filter((x) => x.docId === p.docId).reduce((s, x) => s + x.amount, 0);
-      const newSum = alreadyPaid + p.amount;
-      const docs = doc
-        ? st.docs.map((d) => d.id === p.docId ? { ...d, status: (newSum >= docTotal ? "paid" : newSum > 0 && d.status !== "paid" ? "paid_partial" : d.status) as DocStatus } : d)
-        : st.docs;
-      return { ...st, payments: [...st.payments, p], docs };
+      if (!doc || doc.type === "act") return { ...st, payments: [...st.payments, p] };
+      const docTotal = doc.items.reduce((s, it) => s + it.qty * it.price, 0);
+      const alreadyPaid = st.payments.filter((x) => x.docId === p.docId && x.direction === "income").reduce((s, x) => s + x.amount, 0);
+      const newSum = alreadyPaid + (p.direction === "income" ? p.amount : 0);
+      const newStatus = newSum >= docTotal ? "paid" : newSum > 0 ? "paid_partial" : doc.status;
+      return { ...st, payments: [...st.payments, p], docs: st.docs.map((d) => d.id === p.docId ? { ...d, status: newStatus } : d) };
     });
     apiUpsertPayment(orgId, p).catch(() => toast("Ошибка сохранения оплаты", "err"));
     toast(`Оплата ${p.amount.toLocaleString("ru-RU")} ₽ записана`);
   };
 
+  /* пересчёт статуса документа после изменения оплат */
+  const recalcDocStatus = (st: State, docId: string): State => {
+    const doc = st.docs.find((d) => d.id === docId);
+    if (!doc || doc.type === "act") return st;
+    const docTotal = doc.items.reduce((s, it) => s + it.qty * it.price, 0);
+    const paidSum = st.payments.filter((x) => x.docId === docId && x.direction === "income").reduce((s, x) => s + x.amount, 0);
+    let newStatus: DocStatus = doc.status;
+    if (paidSum >= docTotal && docTotal > 0) newStatus = "paid";
+    else if (paidSum > 0) newStatus = "paid_partial";
+    else if (doc.status === "paid" || doc.status === "paid_partial") newStatus = "signed";
+    if (newStatus === doc.status) return st;
+    return { ...st, docs: st.docs.map((d) => d.id === docId ? { ...d, status: newStatus } : d) };
+  };
+
   const updatePayment = (p: Payment) => {
-    setState((st) => ({ ...st, payments: st.payments.map((x) => (x.id === p.id ? p : x)) }));
+    setState((st) => {
+      st = { ...st, payments: st.payments.map((x) => (x.id === p.id ? p : x)) };
+      return recalcDocStatus(st, p.docId);
+    });
     apiUpsertPayment(orgId, p).catch(() => {});
+    apiUpsertDocument(orgId, state.docs.find((d) => d.id === p.docId)!).catch(() => {});
     toast("Оплата обновлена");
   };
 
   const deletePayment = (id: string) => {
-    setState((st) => ({ ...st, payments: st.payments.filter((x) => x.id !== id) }));
+    const pay = state.payments.find((x) => x.id === id);
+    setState((st) => {
+      st = { ...st, payments: st.payments.filter((x) => x.id !== id) };
+      if (pay?.docId) return recalcDocStatus(st, pay.docId);
+      return st;
+    });
     apiDeletePayment(id).catch(() => {});
+    if (pay?.docId) {
+      const doc = state.docs.find((d) => d.id === pay.docId);
+      if (doc) apiUpsertDocument(orgId, doc).catch(() => {});
+    }
     toast("Оплата удалена");
   };
 
@@ -1096,6 +1125,7 @@ export default function App() {
                   amount,
                   method: "Банковский перевод",
                   name: suggestPaymentName(previewDoc, docContract),
+                  direction: "income",
                 })
               }
               onAddPayment={addPayment}

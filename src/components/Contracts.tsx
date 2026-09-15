@@ -20,10 +20,11 @@ import { IconContract, IconPlus } from "./icons";
 /* расчёт фактических сумм по договору из платежей */
 function calcActuals(contract: Contract, docs: Doc[], payments: Payment[]) {
   const docIds = new Set(docs.filter((d) => d.contractId === contract.id).map((d) => d.id));
-  const sum = payments.filter((p) => docIds.has(p.docId)).reduce((s, p) => s + p.amount, 0);
+  const incomeSum = payments.filter((p) => docIds.has(p.docId) && p.direction === "income").reduce((s, p) => s + p.amount, 0);
+  const expenseSum = payments.filter((p) => docIds.has(p.docId) && p.direction === "expense").reduce((s, p) => s + p.amount, 0);
   return contract.kind === "income"
-    ? { actualIncome: sum, actualExpense: 0 }
-    : { actualIncome: 0, actualExpense: sum };
+    ? { actualIncome: incomeSum, actualExpense: expenseSum }
+    : { actualIncome: expenseSum, actualExpense: incomeSum };
 }
 
 export function ContractForm({

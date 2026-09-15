@@ -141,6 +141,7 @@ export type DbPayment = {
   amount: number;
   method: string;
   name: string;
+  direction: "income" | "expense";
   created_at: string;
   updated_at: string;
 };

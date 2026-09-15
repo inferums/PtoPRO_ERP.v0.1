@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  ACT_STATUSES,
   amountInWords,
   calc,
   displayName,
@@ -120,7 +121,7 @@ export default function DocumentPreview({
                 onChange={(e) => onStatus(doc.id, e.target.value as DocStatus)}
                 className="cursor-pointer rounded-md border border-line bg-white px-2 py-1.5 font-mono text-[11px] normal-case tracking-normal text-ink outline-none transition-colors focus:border-brand"
               >
-                {(Object.keys(STATUS_META) as DocStatus[]).map((s) => (
+                {(doc.type === "act" ? ACT_STATUSES : (Object.keys(STATUS_META) as DocStatus[])).map((s) => (
                   <option key={s} value={s}>{STATUS_META[s].label}</option>
                 ))}
               </select>
@@ -137,10 +138,10 @@ export default function DocumentPreview({
           </div>
         </div>
 
-        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[1fr_290px]">
+        <div className={`grid gap-5 p-4 sm:p-5 ${doc.type === "act" ? "" : "lg:grid-cols-[1fr_290px]"}`}>
           {/* лист А4 */}
           <div id="print-sheet" className="relative h-fit w-full bg-white px-8 py-9 text-ink shadow-[0_24px_60px_-24px_rgba(28,36,50,0.45)] sm:px-11 sm:py-10">
-            {doc.status === "paid" && <Stamp date={doc.date} short={own.short} />}
+            {doc.status === "paid" && doc.type === "invoice" && <Stamp date={doc.date} short={own.short} />}
 
             {/* фирменная шапка: логотип + контакты */}
             <div className="flex items-start justify-between gap-4 border-b-2 border-brand pb-4">
@@ -311,8 +312,8 @@ export default function DocumentPreview({
             </div>
           </div>
 
-          {/* панель оплат */}
-          <div className="space-y-3">
+          {/* панель оплат — только для счетов */}
+          {doc.type === "invoice" && <div className="space-y-3">
             <div className="rounded-xl border border-line bg-surface shadow-sm">
               <div className="flex items-center justify-between border-b border-line px-4 py-3">
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-mut">Оплаты · {payments.length}</p>
@@ -383,7 +384,7 @@ export default function DocumentPreview({
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-70">текущий статус</p>
               <p className="mt-1 font-display text-[14px] font-bold">{meta.label}</p>
             </div>
-          </div>
+          </div>}
         </div>
       </div>
 

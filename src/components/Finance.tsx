@@ -12,13 +12,14 @@ import {
 import { IconCoin, IconPencil, IconPlus, IconTrash } from "./icons";
 import PaymentForm from "./PaymentForm";
 
-/* расчёт фактических сумм по договору из платежей */
+/* расчёт фактических сумм по договору из платежей (только доходные) */
 function calcActuals(contract: Contract, docs: Doc[], payments: Payment[]) {
   const docIds = new Set(docs.filter((d) => d.contractId === contract.id).map((d) => d.id));
-  const sum = payments.filter((p) => docIds.has(p.docId)).reduce((s, p) => s + p.amount, 0);
+  const incomeSum = payments.filter((p) => docIds.has(p.docId) && p.direction === "income").reduce((s, p) => s + p.amount, 0);
+  const expenseSum = payments.filter((p) => docIds.has(p.docId) && p.direction === "expense").reduce((s, p) => s + p.amount, 0);
   return contract.kind === "income"
-    ? { actualIncome: sum, actualExpense: 0 }
-    : { actualIncome: 0, actualExpense: sum };
+    ? { actualIncome: incomeSum, actualExpense: expenseSum }
+    : { actualIncome: expenseSum, actualExpense: incomeSum };
 }
 
 export default function Finance({
@@ -53,7 +54,8 @@ export default function Finance({
   const sumIncome = contracts.reduce((s, c) => s + (contractActuals.get(c.id)?.actualIncome ?? 0), 0);
   const sumExpense = contracts.reduce((s, c) => s + (contractActuals.get(c.id)?.actualExpense ?? 0), 0);
   const profit = sumIncome - sumExpense;
-  const received = payments.reduce((s, p) => s + p.amount, 0);
+  const totalIncomePayments = payments.filter((p) => p.direction === "income").reduce((s, p) => s + p.amount, 0);
+  const totalExpensePayments = payments.filter((p) => p.direction === "expense").reduce((s, p) => s + p.amount, 0);
 
   const paidByDoc = useMemo(() => {
     const m = new Map<string, number>();
@@ -78,7 +80,7 @@ export default function Finance({
         {stat("Доходы (факт)", sumIncome, "text-[#2E7D32]")}
         {stat("Расходы (факт)", sumExpense, "text-[#C62828]")}
         {stat("Чистая прибыль", profit, profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]")}
-        {stat("Получено оплат", received, "text-[#1a237e]")}
+        {stat("Оплачено", totalIncomePayments - totalExpensePayments, "text-[#1a237e]")}
       </div>
 
       {/* P&L по договорам */}
@@ -148,7 +150,9 @@ export default function Finance({
                   <td className="px-3 py-3 font-mono text-[12.5px] font-semibold text-ink">{doc ? `№ ${doc.number}` : "—"}</td>
                   <td className="max-w-[180px] truncate px-3 py-3 text-[13px] text-mut">{doc ? partyName(doc.counterpartyId) : "—"}</td>
                   <td className="px-3 py-3 text-[12.5px] text-mut">{p.method}</td>
-                  <td className="px-3 py-3 text-right font-mono text-[12.5px] font-semibold text-paid">{fmtMoney(p.amount)}</td>
+                  <td className={`px-3 py-3 text-right font-mono text-[12.5px] font-semibold ${p.direction === "expense" ? "text-[#C62828]" : "text-paid"}`}>
+                    {p.direction === "expense" ? "−" : "+"}{fmtMoney(p.amount)}
+                  </td>
                   <td className="px-3 py-3">
                     <div className="flex justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                       <button

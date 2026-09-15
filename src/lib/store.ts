@@ -85,7 +85,12 @@ export type Payment = {
   amount: number;
   method: string;
   name: string; // наименование платежа
+  direction: "income" | "expense";
 };
+
+/* статусы акта: только черновик / отправлен / подписан (без оплат) */
+export const ACT_STATUSES: DocStatus[] = ["draft", "sent", "signed"];
+export const isActStatus = (s: DocStatus) => ACT_STATUSES.includes(s);
 
 /* авто-наименование платежа: из договора или из документа */
 export function suggestPaymentName(doc?: Doc, contract?: Contract): string {
@@ -201,10 +206,10 @@ export function seedState(): State {
   ];
 
   const payments: Payment[] = [
-    { id: "pay1", docId: "d5", date: d(1) + "-26", amount: 32000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d5"), contracts.find((c) => c.id === "c2")) },
-    { id: "pay2", docId: "d8", date: d(1) + "-08", amount: 6000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d8")) },
-    { id: "pay3", docId: "d9", date: d(3) + "-25", amount: 63000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d9"), contracts.find((c) => c.id === "c2")) },
-    { id: "pay4", docId: "d10", date: d(4) + "-28", amount: 9000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d10"), contracts.find((c) => c.id === "c1")) },
+    { id: "pay1", docId: "d5", date: d(1) + "-26", amount: 32000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d5"), contracts.find((c) => c.id === "c2")), direction: "income" },
+    { id: "pay2", docId: "d8", date: d(1) + "-08", amount: 6000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d8")), direction: "income" },
+    { id: "pay3", docId: "d9", date: d(3) + "-25", amount: 63000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d9"), contracts.find((c) => c.id === "c2")), direction: "income" },
+    { id: "pay4", docId: "d10", date: d(4) + "-28", amount: 9000, method: "Банковский перевод", name: suggestPaymentName(docs.find((x) => x.id === "d10"), contracts.find((c) => c.id === "c1")), direction: "income" },
   ];
 
   const letters: Letter[] = [
@@ -280,6 +285,7 @@ export function loadState(userId: string): State {
             amount: Number(p.amount ?? 0),
             method: String(p.method ?? "Банковский перевод"),
             name: String(p.name ?? p.comment ?? "Оплата"),
+            direction: (p.direction === "expense" ? "expense" : "income") as "income" | "expense",
           }))
         : [],
       letters: Array.isArray(parsed.letters) ? parsed.letters : [],
