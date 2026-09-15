@@ -79,8 +79,13 @@ export default function DocumentPreview({
   }, [onClose]);
 
   const downloadWord = async () => {
-    const { downloadDocx } = await import("../lib/docx");
-    await downloadDocx(doc, party, own, contract?.number);
+    try {
+      const { downloadDocx } = await import("../lib/docx");
+      await downloadDocx(doc, party, own, contract?.number);
+    } catch (e) {
+      console.error("[PtoPRO] Word export error:", e);
+      alert("Ошибка экспорта в Word: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const docOption = {

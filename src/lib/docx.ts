@@ -163,6 +163,7 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own,
   const { subtotal, vat, total } = calc(doc);
   const typeMeta = TYPE_META[doc.type];
   const date = fmtDate(doc.date);
+  const ba = doc.bankAccount ?? getDefaultAccount(own);
 
   const headerRow = new TableRow({
     children: [
@@ -198,7 +199,7 @@ export async function downloadDocx(doc: Doc, party: Party | undefined, own: Own,
         properties: {},
         children: [
           ...letterhead(own),
-          bankTable(own, doc.bankAccount ?? getDefaultAccount(own)!),
+          ...(ba ? [bankTable(own, ba)] : []),
           new Paragraph({ spacing: { before: 320, after: 200 }, alignment: AlignmentType.CENTER, children: [run(`${typeMeta.title} № ${doc.number} от ${date} г.`, { size: 26, bold: true })] }),
           partiesTable(own, party, contractNo ?? "", date),
           new Paragraph({ spacing: { before: 240 }, children: [] }),
