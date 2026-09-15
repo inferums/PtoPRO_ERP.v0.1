@@ -5,7 +5,6 @@ import {
   CONTRACT_STATUS_META,
   fmtDate,
   fmtMoney,
-  netProfit,
   suggestPaymentName,
   STATUS_META,
   todayISO,
@@ -22,6 +21,15 @@ import {
 import { ContractForm } from "./Contracts";
 import PaymentForm from "./PaymentForm";
 import { IconArrow, IconCoin, IconDownload, IconLetter, IconPencil, IconPlus, IconPrint, IconTrash } from "./icons";
+
+/* расчёт фактических сумм по договору из платежей */
+function calcActuals(contract: Contract, docs: Doc[], payments: Payment[]) {
+  const docIds = new Set(docs.filter((d) => d.contractId === contract.id).map((d) => d.id));
+  const sum = payments.filter((p) => docIds.has(p.docId)).reduce((s, p) => s + p.amount, 0);
+  return contract.kind === "income"
+    ? { actualIncome: sum, actualExpense: 0 }
+    : { actualIncome: 0, actualExpense: sum };
+}
 
 function Badge({ chip, label }: { chip: string; label: string }) {
   return (
@@ -113,6 +121,10 @@ export default function ContractDetail({
   const acts = useMemo(() => docs.filter((d) => d.type === "act"), [docs]);
   const invoiced = invoices.reduce((s, d) => s + calc(d).total, 0);
   const received = payments.reduce((s, p) => s + p.amount, 0);
+  const actuals = contract.kind === "income"
+    ? { actualIncome: received, actualExpense: 0 }
+    : { actualIncome: 0, actualExpense: received };
+  const profit = actuals.actualIncome - actuals.actualExpense;
   const children = contracts.filter((c) => c.parentId === contract.id);
   const kind = CONTRACT_KIND_META[contract.kind];
   const status = CONTRACT_STATUS_META[contract.status];
@@ -201,7 +213,7 @@ export default function ContractDetail({
         <Stat label="Плановый доход" value={fmtMoney(contract.plannedIncome)} color="text-[#2E7D32]" />
         <Stat label="Выставлено счетов" value={fmtMoney(invoiced)} color="text-[#1a237e]" />
         <Stat label="Получено оплат" value={fmtMoney(received)} color="text-[#2E7D32]" />
-        <Stat label="Расходы по договору" value={fmtMoney(contract.actualExpense)} color="text-[#C62828]" />
+        <Stat label="Расходы по договору" value={fmtMoney(actuals.actualExpense)} color="text-[#C62828]" />
       </div>
 
       {/* вкладки */}
@@ -263,7 +275,7 @@ export default function ContractDetail({
               <Row label="Плановый доход">{fmtMoney(contract.plannedIncome)}</Row>
               <Row label="Плановый расход">{fmtMoney(contract.plannedExpense)}</Row>
               <Row label="Чистая прибыль">
-                <span className={netProfit(contract) >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}>{fmtMoney(netProfit(contract))}</span>
+                <span className={profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}>{fmtMoney(profit)}</span>
               </Row>
               <Row label="Начало">{fmtDate(contract.startDate)}</Row>
               <Row label="Окончание">{fmtDate(contract.endDate)}</Row>

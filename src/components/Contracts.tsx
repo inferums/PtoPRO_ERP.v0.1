@@ -5,7 +5,6 @@ import {
   CONTRACT_STATUS_ORDER,
   fmtDate,
   fmtMoney,
-  netProfit,
   todayISO,
   uid,
   type Contract,
@@ -13,9 +12,19 @@ import {
   type ContractStatus,
   type Doc,
   type Party,
+  type Payment,
 } from "../lib/store";
 import Modal from "./Modal";
 import { IconContract, IconPlus } from "./icons";
+
+/* расчёт фактических сумм по договору из платежей */
+function calcActuals(contract: Contract, docs: Doc[], payments: Payment[]) {
+  const docIds = new Set(docs.filter((d) => d.contractId === contract.id).map((d) => d.id));
+  const sum = payments.filter((p) => docIds.has(p.docId)).reduce((s, p) => s + p.amount, 0);
+  return contract.kind === "income"
+    ? { actualIncome: sum, actualExpense: 0 }
+    : { actualIncome: 0, actualExpense: sum };
+}
 
 export function ContractForm({
   initial,
@@ -107,14 +116,6 @@ export function ContractForm({
           <input type="number" min={0} value={f.plannedExpense || ""} onChange={(e) => setF({ ...f, plannedExpense: Number(e.target.value) || 0 })} className={inp} />
         </div>
         <div>
-          <label className={lbl}>Фактический доход, ₽</label>
-          <input type="number" min={0} value={f.actualIncome || ""} onChange={(e) => setF({ ...f, actualIncome: Number(e.target.value) || 0 })} className={inp} />
-        </div>
-        <div>
-          <label className={lbl}>Фактический расход, ₽</label>
-          <input type="number" min={0} value={f.actualExpense || ""} onChange={(e) => setF({ ...f, actualExpense: Number(e.target.value) || 0 })} className={inp} />
-        </div>
-        <div>
           <label className={lbl}>Начало</label>
           <input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} className={inp} />
         </div>
@@ -155,6 +156,7 @@ export default function Contracts({
   contracts,
   parties,
   docs,
+  payments,
   onUpsert,
   onDelete,
   onOpen,
@@ -163,6 +165,7 @@ export default function Contracts({
   contracts: Contract[];
   parties: Party[];
   docs: Doc[];
+  payments: Payment[];
   onUpsert: (c: Contract) => void;
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
@@ -264,7 +267,8 @@ export default function Contracts({
             {rows.map(({ c, nested }, i) => {
               const status = CONTRACT_STATUS_META[c.status];
               const kind = CONTRACT_KIND_META[c.kind];
-              const profit = netProfit(c);
+              const actuals = calcActuals(c, docs, payments);
+              const profit = actuals.actualIncome - actuals.actualExpense;
               return (
                 <tr
                   key={c.id}
@@ -285,8 +289,8 @@ export default function Contracts({
                   </td>
                   {money(c.plannedIncome)}
                   {money(c.plannedExpense)}
-                  {money(c.actualIncome, "text-[#2E7D32]")}
-                  {money(c.actualExpense, "text-[#C62828]")}
+                  {money(actuals.actualIncome, "text-[#2E7D32]")}
+                  {money(actuals.actualExpense, "text-[#C62828]")}
                   {money(profit, `font-medium ${profit >= 0 ? "text-[#2E7D32]" : "text-[#C62828]"}`)}
                   <td className="whitespace-nowrap px-2 py-2.5 text-center">
                     <span className={`inline-block border px-2 py-0.5 text-[11px] font-medium ${status.chip}`}>{status.label}</span>
