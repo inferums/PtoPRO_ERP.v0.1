@@ -318,20 +318,6 @@ export default function DocumentPreview({
               const month = MONTHS[dt.getMonth()] ?? "";
               const year = dt.getFullYear();
               return (<>
-              <h2 className="mt-6 text-center text-[15px] font-bold text-ink">
-                Акт № {doc.number} от &laquo;{day}&raquo; {month} {year} г.
-              </h2>
-              <p className="mt-1 text-center text-[13px] text-ink">сдачи-приемки услуг</p>
-              {contract && (
-                <p className="mt-1 text-center text-[12px] text-mut">
-                  к Договору № {contract.number} от &laquo;{new Date(`${contract.startDate}T12:00:00`).getDate().toString().padStart(2,"0")}&raquo; {MONTHS[new Date(`${contract.startDate}T12:00:00`).getMonth()] ?? ""} {new Date(`${contract.startDate}T12:00:00`).getFullYear()} г.
-                </p>
-              )}
-
-              <p className="mt-5 text-[11.5px] leading-relaxed text-ink">
-                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.representativePosition ? `, в лице ${party.representativePosition} ${party.representativeName ?? party.person ?? ""}` : party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора, соответствуют нормативным и установленным требованиям, в надлежащем порядке оформлены и переданы в полном объеме:
-              </p>
-
               {/* реквизиты сторон */}
               <table className="mt-4 w-full border-collapse text-[10px] leading-snug">
                 <thead>
@@ -378,6 +364,20 @@ export default function DocumentPreview({
                   </tr>
                 </tbody>
               </table>
+
+              <h2 className="mt-6 text-center text-[15px] font-bold text-ink">
+                Акт № {doc.number} от &laquo;{day}&raquo; {month} {year} г.
+              </h2>
+              <p className="mt-1 text-center text-[13px] text-ink">сдачи-приемки услуг</p>
+              {contract && (
+                <p className="mt-1 text-center text-[12px] text-mut">
+                  к Договору № {contract.number} от &laquo;{new Date(`${contract.startDate}T12:00:00`).getDate().toString().padStart(2,"0")}&raquo; {MONTHS[new Date(`${contract.startDate}T12:00:00`).getMonth()] ?? ""} {new Date(`${contract.startDate}T12:00:00`).getFullYear()} г.
+                </p>
+              )}
+
+              <p className="mt-5 text-[11.5px] leading-relaxed text-ink">
+                Мы, нижеподписавшиеся, <strong>Заказчик</strong> — {party?.name ?? ""}{party?.representativePosition ? `, в лице ${party.representativePosition} ${party.representativeName ?? party.person ?? ""}` : party?.person ? `, в лице ${party.person}` : ""}, с одной стороны, и <strong>Исполнитель</strong> — {displayName(own.name)} (ИНН {own.inn ?? "—"}), с другой стороны, составили настоящий акт о том, что выполненные работы удовлетворяют условиям договора, соответствуют нормативным и установленным требованиям, в надлежащем порядке оформлены и переданы в полном объеме:
+              </p>
 
               <table className="mt-4 w-full border-collapse text-[11.5px]">
                 <thead>
