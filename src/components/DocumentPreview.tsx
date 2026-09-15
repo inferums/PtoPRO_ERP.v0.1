@@ -572,19 +572,19 @@ export default function DocumentPreview({
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-70">текущий статус</p>
               <p className="mt-1 font-display text-[14px] font-bold">{meta.label}</p>
             </div>
-
-            {/* подписанный скан */}
-            <SignedFileSection
-              fileUrl={doc.signedFileUrl}
-              label={`${TYPE_META[doc.type]?.label ?? "Документ"} № ${doc.number}`}
-              onUpload={async (file) => {
-                const { uploadSignedFile } = await import("../lib/api");
-                const url = await uploadSignedFile(orgId, "document", doc.id, file);
-                onSignedFileChange(url);
-              }}
-              onRemove={() => onSignedFileChange(null)}
-            />
           </div>}
+
+          {/* подписанный скан — для счетов и актов */}
+          <SignedFileSection
+            fileUrl={doc.signedFileUrl}
+            label={`${TYPE_META[doc.type]?.label ?? "Документ"} № ${doc.number}`}
+            onUpload={async (file) => {
+              const { uploadSignedFile } = await import("../lib/api");
+              const url = await uploadSignedFile(orgId, "document", doc.id, file);
+              onSignedFileChange(url);
+            }}
+            onRemove={() => onSignedFileChange(null)}
+          />
         </div>
       </div>
 
