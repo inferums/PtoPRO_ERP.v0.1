@@ -6,6 +6,7 @@ import {
   fmtMoney,
   suggestPaymentName,
   STATUS_META,
+  TYPE_META,
   CONTRACT_STATUS_META,
   emptyState,
   seedState,
@@ -590,6 +591,14 @@ export default function App() {
     toast(`Документ № ${doc.number} сохранён`);
   };
 
+  const deleteDoc = (id: string) => {
+    const doc = state.docs.find((d) => d.id === id);
+    setState((st) => ({ ...st, docs: st.docs.filter((d) => d.id !== id) }));
+    setPreviewId(null);
+    apiDeleteDocument(id).catch(() => toast("Ошибка удаления", "err"));
+    if (doc) toast(`${TYPE_META[doc.type]?.label ?? "Документ"} № ${doc.number} удалён`);
+  };
+
   const upsertParty = (p: Party) => {
     setState((st) => {
       const exists = st.parties.some((x) => x.id === p.id);
@@ -1013,6 +1022,7 @@ export default function App() {
               <Dashboard
                 docs={state.docs}
                 parties={state.parties}
+                payments={state.payments}
                 onOpen={(id) => setPreviewId(id)}
                 onNew={() => setEditing("new")}
                 onGoDocs={() => go("contracts")}
@@ -1117,6 +1127,7 @@ export default function App() {
                 setPreviewId(null);
                 setEditing(d);
               }}
+              onDelete={deleteDoc}
               onQuickPay={(amount) =>
                 addPayment({
                   id: uid(),

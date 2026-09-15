@@ -44,6 +44,7 @@ export default function DocumentPreview({
   onClose,
   onStatus,
   onEdit,
+  onDelete,
   onQuickPay,
   onAddPayment,
   onUpdatePayment,
@@ -57,6 +58,7 @@ export default function DocumentPreview({
   onClose: () => void;
   onStatus: (id: string, s: DocStatus) => void;
   onEdit: (doc: Doc) => void;
+  onDelete: (id: string) => void;
   onQuickPay: (amount: number) => void;
   onAddPayment: (p: Payment) => void;
   onUpdatePayment: (p: Payment) => void;
@@ -128,6 +130,9 @@ export default function DocumentPreview({
             </label>
             <button onClick={() => onEdit(doc)} className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-mut transition-colors hover:bg-soft hover:text-ink" title="Изменить">
               <IconPencil size={15} />
+            </button>
+            <button onClick={() => { if (window.confirm(`Удалить ${TYPE_META[doc.type]?.label ?? "документ"} № ${doc.number}?`)) onDelete(doc.id); }} className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-mut transition-colors hover:bg-[#fbe7e5] hover:text-danger" title="Удалить">
+              <IconTrash size={15} />
             </button>
             <button onClick={() => window.print()} className="grid h-8 w-8 cursor-pointer place-items-center rounded-md text-mut transition-colors hover:bg-soft hover:text-ink" title="Печать">
               <IconPrint size={15} />

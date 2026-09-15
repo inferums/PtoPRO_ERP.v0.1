@@ -8,6 +8,7 @@ import {
   STATUS_META,
   TYPE_META,
   type Doc,
+  type Payment,
 } from "../lib/store";
 import { IconArrow, IconPlus } from "./icons";
 
@@ -49,12 +50,14 @@ function StatTile({ label, value, sub, dark }: { label: string; value: string; s
 export default function Dashboard({
   docs,
   parties,
+  payments,
   onOpen,
   onNew,
   onGoDocs,
 }: {
   docs: Doc[];
   parties: { id: string; name: string }[];
+  payments: Payment[];
   onOpen: (id: string) => void;
   onNew: () => void;
   onGoDocs: () => void;
@@ -64,7 +67,7 @@ export default function Dashboard({
 
   const sum = (list: Doc[]) => list.reduce((s, x) => s + calc(x).total, 0);
   const billedMonth = sum(docs.filter((x) => x.date.startsWith(curPrefix)));
-  const paidTotal = sum(docs.filter((x) => x.status === "paid"));
+  const paidTotal = payments.filter((p) => p.direction === "income").reduce((s, p) => s + p.amount, 0);
   const awaiting = sum(docs.filter((x) => x.status === "sent" || x.status === "signed" || x.status === "paid_partial"));
   const drafts = docs.filter((x) => x.status === "draft").length;
 
