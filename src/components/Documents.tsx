@@ -150,7 +150,7 @@ export default function Documents({
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                      {meta.next && (
+                      {meta.next && !(d.type === "act" && (meta.next === "paid" || meta.next === "paid_partial")) && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -162,7 +162,7 @@ export default function Documents({
                           {meta.nextLabel} <IconArrow size={11} />
                         </button>
                       )}
-                      {meta.altNext && (
+                      {meta.altNext && d.type !== "act" && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

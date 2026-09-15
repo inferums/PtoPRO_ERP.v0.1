@@ -65,10 +65,11 @@ export default function Dashboard({
   const now = new Date();
   const curPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
+  const invoices = docs.filter((x) => x.type === "invoice");
   const sum = (list: Doc[]) => list.reduce((s, x) => s + calc(x).total, 0);
-  const billedMonth = sum(docs.filter((x) => x.date.startsWith(curPrefix)));
+  const billedMonth = sum(invoices.filter((x) => x.date.startsWith(curPrefix)));
   const paidTotal = payments.filter((p) => p.direction === "income").reduce((s, p) => s + p.amount, 0);
-  const awaiting = sum(docs.filter((x) => x.status === "sent" || x.status === "signed" || x.status === "paid_partial"));
+  const awaiting = sum(invoices.filter((x) => x.status === "sent" || x.status === "signed" || x.status === "paid_partial"));
   const drafts = docs.filter((x) => x.status === "draft").length;
 
   const vBilled = useCountUp(billedMonth);
@@ -80,7 +81,7 @@ export default function Dashboard({
     const key = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
     return { key, label: MONTHS_SHORT[t.getMonth()], sum: 0, current: i === 5 };
   });
-  docs.forEach((x) => {
+  invoices.forEach((x) => {
     const m = months.find((mm) => x.date.startsWith(mm.key));
     if (m) m.sum += calc(x).total;
   });
