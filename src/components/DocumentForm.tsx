@@ -42,6 +42,7 @@ export default function DocumentForm({
 }) {
   const defaultBa = own ? getDefaultAccount(own) : undefined;
   const [type, setType] = useState<DocType>(initial?.type ?? forcedType ?? "invoice");
+  const [number, setNumber] = useState<number>(initial?.number ?? fallbackNumber);
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [counterpartyId, setCounterpartyId] = useState(initial?.counterpartyId ?? parties[0]?.id ?? "");
   const [contractId, setContractId] = useState(initial?.contractId ?? "");
@@ -68,7 +69,7 @@ export default function DocumentForm({
 
     onSave({
       id: initial?.id ?? uid(),
-      number: initial?.number ?? fallbackNumber,
+      number,
       type,
       status: initial?.status ?? "draft",
       date,
@@ -119,6 +120,11 @@ export default function DocumentForm({
               </div>
             </div>
           )}
+
+          <div>
+            <label className={lbl}>Номер</label>
+            <input type="number" min={1} value={number || ""} onChange={(e) => setNumber(Number(e.target.value) || 0)} className={inp} />
+          </div>
 
           <div>
             <label className={lbl}>Дата</label>
