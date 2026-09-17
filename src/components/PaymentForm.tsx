@@ -83,7 +83,7 @@ export default function PaymentForm({
               </button>
               <button
                 type="button"
-                onClick={() => setDirection("expense")}
+                onClick={() => { setDirection("expense"); setDocId(""); }}
                 className={`cursor-pointer px-3 py-2 font-mono text-[11.5px] uppercase tracking-[0.08em] transition-all ${
                   direction === "expense" ? "bg-white font-semibold text-[#C62828] shadow-sm" : "text-mut hover:text-ink"
                 }`}
@@ -109,8 +109,8 @@ export default function PaymentForm({
             )}
           </div>
 
-          {/* привязка к документу или договору */}
-          {docs && (
+          {/* привязка к документу — только для доходных операций */}
+          {docs && direction === "income" && (
             <div>
               <label className={LBL}>Документ (необязательно)</label>
               <select value={docId} onChange={(e) => pick(e.target.value)} disabled={!!initial} className={`${INP} cursor-pointer disabled:bg-soft disabled:text-mut`}>
