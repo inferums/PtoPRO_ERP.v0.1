@@ -367,9 +367,10 @@ export default function ContractDetail({
           )}
           {payments.map((p) => {
             const pDoc = docs.find((d) => d.id === p.docId);
+            const isExpense = p.direction === "expense";
             return (
               <div key={p.id} className="group flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3 transition-colors hover:border-line2">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-[#e1f3e9] text-paid">
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-md ${isExpense ? "bg-[#FFEBEE] text-[#C62828]" : "bg-[#e1f3e9] text-paid"}`}>
                   <IconCoin size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -379,7 +380,7 @@ export default function ContractDetail({
                     {pDoc ? ` · № ${pDoc.number}` : ""}
                   </span>
                 </span>
-                <span className="font-mono text-[13.5px] font-bold text-[#2E7D32]">{fmtMoney(p.amount)}</span>
+                <span className={`font-mono text-[13.5px] font-bold ${isExpense ? "text-[#C62828]" : "text-[#2E7D32]"}`}>{isExpense ? "−" : "+"}{fmtMoney(p.amount)}</span>
                 <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                   <button
                     onClick={() => setPayForm({ mode: "edit", pay: p })}
