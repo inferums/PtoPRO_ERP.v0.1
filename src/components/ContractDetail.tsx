@@ -127,7 +127,7 @@ export default function ContractDetail({
   const invoices = useMemo(() => docs.filter((d) => d.type === "invoice"), [docs]);
   const acts = useMemo(() => docs.filter((d) => d.type === "act"), [docs]);
   const invoiced = invoices.reduce((s, d) => s + calc(d).total, 0);
-  const received = payments.reduce((s, p) => s + p.amount, 0);
+  const received = payments.filter((p) => p.direction === "income").reduce((s, p) => s + p.amount, 0);
   const children = contracts.filter((c) => c.parentId === contract.id);
   const actuals = calcActuals(contract, docs, payments, children);
   const profit = actuals.actualIncome - actuals.actualExpense;
