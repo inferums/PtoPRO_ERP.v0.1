@@ -417,22 +417,15 @@ export default function ContractDetail({
           {payForm && (
             <PaymentForm
               title={payForm.mode === "add" ? "Новая оплата" : "Редактирование оплаты"}
-              docs={
-                payForm.mode === "add"
-                  ? docs.map((d) => ({
-                      id: d.id,
-                      label: `${TYPE_META[d.type].label} № ${d.number} · ${fmtMoney(calc(d).total)}`,
-                      total: calc(d).total,
-                      paid: paidByDoc.get(d.id) ?? 0,
-                      suggestedName: suggestPaymentName(d, contract),
-                    }))
-                  : undefined
-              }
-              contracts={
-                payForm.mode === "add"
-                  ? [{ id: contract.id, label: `${contract.number} — ${contract.subject}` }, ...children.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))]
-                  : undefined
-              }
+              docs={docs.map((d) => ({
+                id: d.id,
+                label: `${TYPE_META[d.type].label} № ${d.number} · ${fmtMoney(calc(d).total)}`,
+                total: calc(d).total,
+                paid: paidByDoc.get(d.id) ?? 0,
+                suggestedName: suggestPaymentName(d, contract),
+              }))}
+              contracts={[{ id: contract.id, label: `${contract.number} — ${contract.subject}` }, ...children.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))]}
+              counterparties={parties.map((p) => ({ id: p.id, name: p.name }))}
               initial={payForm.mode === "edit" ? payForm.pay : null}
               onSave={(p) => {
                 if (payForm.mode === "add") onAddPayment(p);

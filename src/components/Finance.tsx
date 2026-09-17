@@ -143,12 +143,16 @@ export default function Finance({
           <tbody className="divide-y divide-line">
             {sortedPays.map((p) => {
               const doc = docById(p.docId);
+              const contract = p.contractId ? contracts.find((c) => c.id === p.contractId) : null;
+              const counterparty = p.counterpartyId ? parties.find((x) => x.id === p.counterpartyId) : (doc ? parties.find((x) => x.id === doc.counterpartyId) : null);
               return (
                 <tr key={p.id} className="group transition-colors hover:bg-soft">
                   <td className="px-3 py-3 font-mono text-[12px] text-mut">{fmtDate(p.date)}</td>
                   <td className="max-w-[240px] truncate px-3 py-3 text-[13px] font-medium text-ink" title={p.name}>{p.name}</td>
-                  <td className="px-3 py-3 font-mono text-[12.5px] font-semibold text-ink">{doc ? `№ ${doc.number}` : "—"}</td>
-                  <td className="max-w-[180px] truncate px-3 py-3 text-[13px] text-mut">{doc ? partyName(doc.counterpartyId) : "—"}</td>
+                  <td className="px-3 py-3 font-mono text-[12.5px] font-semibold text-ink">
+                    {doc ? `№ ${doc.number}` : contract ? `д-р ${contract.number}` : "—"}
+                  </td>
+                  <td className="max-w-[180px] truncate px-3 py-3 text-[13px] text-mut">{counterparty?.name ?? "—"}</td>
                   <td className="px-3 py-3 text-[12.5px] text-mut">{p.method}</td>
                   <td className={`px-3 py-3 text-right font-mono text-[12.5px] font-semibold ${p.direction === "expense" ? "text-[#C62828]" : "text-paid"}`}>
                     {p.direction === "expense" ? "−" : "+"}{fmtMoney(p.amount)}
@@ -199,22 +203,14 @@ export default function Finance({
       {payForm && (
         <PaymentForm
           title={payForm.mode === "add" ? "Новая оплата" : "Редактирование оплаты"}
-          docs={
-            payForm.mode === "add"
-              ? docs.map((d) => ({
-                  id: d.id,
-                  label: `№ ${d.number} · ${partyName(d.counterpartyId)} · ${fmtMoney(calc(d).total)}`,
-                  total: calc(d).total,
-                  paid: paidByDoc.get(d.id) ?? 0,
-                  suggestedName: suggestPaymentName(d, contracts.find((c) => c.id === d.contractId)),
-                }))
-              : undefined
-          }
-          contracts={
-            payForm.mode === "add"
-              ? contracts.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))
-              : undefined
-          }
+          docs={docs.map((d) => ({
+            id: d.id,
+            label: `№ ${d.number} · ${partyName(d.counterpartyId)} · ${fmtMoney(calc(d).total)}`,
+            total: calc(d).total,
+            paid: paidByDoc.get(d.id) ?? 0,
+            suggestedName: suggestPaymentName(d, contracts.find((c) => c.id === d.contractId)),
+          }))}
+          contracts={contracts.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))}
           counterparties={parties.map((p) => ({ id: p.id, name: p.name }))}
           initial={payForm.mode === "edit" ? payForm.pay : null}
           onSave={(p) => {
