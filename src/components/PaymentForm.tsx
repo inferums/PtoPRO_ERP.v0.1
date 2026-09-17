@@ -10,11 +10,17 @@ export type DocOption = {
   suggestedName?: string;
 };
 
+export type ContractOption = {
+  id: string;
+  label: string;
+};
+
 const METHODS = ["Банковский перевод", "Наличные", "Карта"];
 
 export default function PaymentForm({
   title,
   docs,
+  contracts,
   initial,
   defaultAmount,
   info,
@@ -23,6 +29,7 @@ export default function PaymentForm({
 }: {
   title: string;
   docs?: DocOption[];
+  contracts?: ContractOption[];
   initial?: Payment | null;
   defaultAmount?: number;
   info?: React.ReactNode;
@@ -30,6 +37,7 @@ export default function PaymentForm({
   onClose: () => void;
 }) {
   const [docId, setDocId] = useState(initial?.docId || docs?.[0]?.id || "");
+  const [contractId, setContractId] = useState(initial?.contractId || "");
   const sel = docs?.find((d) => d.id === docId);
   const [amount, setAmount] = useState<number>(
     initial?.amount ?? defaultAmount ?? (sel ? Math.max(sel.total - sel.paid, 0) : 0)
@@ -42,11 +50,17 @@ export default function PaymentForm({
 
   const pick = (id: string) => {
     setDocId(id);
+    if (id) setContractId(""); // привязка к документу — убираем привязку к договору
     const d = docs?.find((x) => x.id === id);
     if (!initial) {
       if (d) setAmount(Math.max(d.total - d.paid, 0));
       if (!nameTouched) setName(d?.suggestedName ?? "");
     }
+  };
+
+  const pickContract = (id: string) => {
+    setContractId(id);
+    if (id) setDocId(""); // привязка к договору — убираем привязку к документу
   };
 
   return (
@@ -95,11 +109,12 @@ export default function PaymentForm({
             )}
           </div>
 
+          {/* привязка к документу или договору */}
           {docs && (
             <div>
               <label className={LBL}>Документ (необязательно)</label>
               <select value={docId} onChange={(e) => pick(e.target.value)} disabled={!!initial} className={`${INP} cursor-pointer disabled:bg-soft disabled:text-mut`}>
-                <option value="">— без привязки к документу —</option>
+                <option value="">— не привязан —</option>
                 {docs.map((d) => (
                   <option key={d.id} value={d.id}>{d.label}</option>
                 ))}
@@ -110,6 +125,18 @@ export default function PaymentForm({
                   <span className="font-semibold text-wait">{fmtMoney(Math.max(sel.total - sel.paid, 0))}</span>
                 </p>
               )}
+            </div>
+          )}
+
+          {contracts && (
+            <div>
+              <label className={LBL}>Договор (необязательно)</label>
+              <select value={contractId} onChange={(e) => pickContract(e.target.value)} disabled={!!initial} className={`${INP} cursor-pointer disabled:bg-soft disabled:text-mut`}>
+                <option value="">— не привязан —</option>
+                {contracts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -138,7 +165,7 @@ export default function PaymentForm({
       <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
         <button onClick={onClose} className={BTN_GHOST}>отмена</button>
         <button
-          onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, date, amount, method, name: name.trim() || "Оплата", direction })}
+          onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, contractId: contractId || undefined, date, amount, method, name: name.trim() || "Оплата", direction })}
           className={BTN_PRIMARY}
         >
           сохранить

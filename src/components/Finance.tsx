@@ -210,6 +210,11 @@ export default function Finance({
                 }))
               : undefined
           }
+          contracts={
+            payForm.mode === "add"
+              ? contracts.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))
+              : undefined
+          }
           initial={payForm.mode === "edit" ? payForm.pay : null}
           onSave={(p) => {
             if (payForm.mode === "add") onAddPayment(p);

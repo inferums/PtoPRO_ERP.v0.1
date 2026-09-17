@@ -82,11 +82,11 @@ export function docToRows(doc: Doc, orgId: string): { document: Partial<DbDocume
 }
 
 export function rowToPayment(r: DbPayment): Payment {
-  return { id: r.id, docId: r.doc_id ?? "", date: r.date, amount: r.amount, method: r.method, name: r.name, direction: r.direction ?? "income" };
+  return { id: r.id, docId: r.doc_id ?? "", contractId: r.contract_id || undefined, date: r.date, amount: r.amount, method: r.method, name: r.name, direction: r.direction ?? "income" };
 }
 
 export function paymentToRow(p: Payment, orgId: string): Partial<DbPayment> {
-  return { org_id: orgId, doc_id: p.docId || null, date: p.date, amount: p.amount, method: p.method, name: p.name, direction: p.direction ?? "income" };
+  return { org_id: orgId, doc_id: p.docId || null, contract_id: p.contractId ?? null, date: p.date, amount: p.amount, method: p.method, name: p.name, direction: p.direction ?? "income" };
 }
 
 export function rowToLetter(r: DbLetter): Letter {

@@ -93,6 +93,7 @@ export const netProfit = (c: Contract) => c.actualIncome - c.actualExpense;
 export type Payment = {
   id: string;
   docId: string; // пустая строка — оплата не привязана к документу
+  contractId?: string; // привязка к договору напрямую
   date: string;
   amount: number;
   method: string;
@@ -293,6 +294,7 @@ export function loadState(userId: string): State {
         ? (parsed.payments as Record<string, unknown>[]).map((p) => ({
             id: String(p.id ?? uid()),
             docId: String(p.docId ?? ""),
+            contractId: p.contractId ? String(p.contractId) : undefined,
             date: String(p.date ?? todayISO()),
             amount: Number(p.amount ?? 0),
             method: String(p.method ?? "Банковский перевод"),

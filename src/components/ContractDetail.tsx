@@ -428,9 +428,14 @@ export default function ContractDetail({
                     }))
                   : undefined
               }
+              contracts={
+                payForm.mode === "add"
+                  ? [{ id: contract.id, label: `${contract.number} — ${contract.subject}` }, ...children.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))]
+                  : undefined
+              }
               initial={payForm.mode === "edit" ? payForm.pay : null}
               onSave={(p) => {
-                if (payForm.mode === "add") onAddPayment({ ...p, docId: p.docId || docs[0]?.id || "" });
+                if (payForm.mode === "add") onAddPayment(p);
                 else onUpdatePayment(p);
                 setPayForm(null);
               }}
