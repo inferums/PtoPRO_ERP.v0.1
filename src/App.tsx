@@ -991,14 +991,15 @@ export default function App() {
           </div>
 
           <div className="px-4 py-6 md:px-8 md:py-7">
-            {previewContract ? (
+            {previewContract ? (() => {
+              const childIds = new Set(state.contracts.filter((c) => c.parentId === previewContract.id).map((c) => c.id));
+              const relatedDocIds = new Set(state.docs.filter((d) => d.contractId === previewContract.id || (d.contractId && childIds.has(d.contractId))).map((d) => d.id));
+              return (
               <ContractDetail
                 contract={previewContract}
                 party={state.parties.find((p) => p.id === previewContract.counterpartyId)}
-                docs={state.docs.filter((d) => d.contractId === previewContract.id)}
-                payments={state.payments.filter((p) =>
-                  state.docs.some((d) => d.id === p.docId && d.contractId === previewContract.id)
-                )}
+                docs={state.docs.filter((d) => relatedDocIds.has(d.id))}
+                payments={state.payments.filter((p) => relatedDocIds.has(p.docId))}
                 letters={state.letters.filter((l) => l.counterpartyId === previewContract.counterpartyId)}
                 contracts={state.contracts}
                 parties={state.parties}
@@ -1023,7 +1024,8 @@ export default function App() {
                   apiUpsertContract(orgId, updated).catch(() => toast("Ошибка сохранения файла", "err"));
                 }}
               />
-            ) : (
+              );
+            })() : (
               <>
             {view === "dashboard" && (
               <Dashboard

@@ -23,9 +23,10 @@ import PaymentForm from "./PaymentForm";
 import { SignedFileSection } from "./DocumentPreview";
 import { IconArrow, IconCoin, IconDownload, IconLetter, IconPencil, IconPlus, IconPrint, IconTrash } from "./icons";
 
-/* расчёт фактических сумм по договору из платежей */
-function calcActuals(contract: Contract, docs: Doc[], payments: Payment[]) {
-  const docIds = new Set(docs.filter((d) => d.contractId === contract.id).map((d) => d.id));
+/* расчёт фактических сумм по договору из платежей (включая подчинённые договоры) */
+function calcActuals(contract: Contract, docs: Doc[], payments: Payment[], childContracts: Contract[] = []) {
+  const childIds = new Set(childContracts.map((c) => c.id));
+  const docIds = new Set(docs.filter((d) => d.contractId === contract.id || (d.contractId && childIds.has(d.contractId))).map((d) => d.id));
   const incomeSum = payments.filter((p) => docIds.has(p.docId) && p.direction === "income").reduce((s, p) => s + p.amount, 0);
   const expenseSum = payments.filter((p) => docIds.has(p.docId) && p.direction === "expense").reduce((s, p) => s + p.amount, 0);
   return contract.kind === "income"
@@ -127,11 +128,9 @@ export default function ContractDetail({
   const acts = useMemo(() => docs.filter((d) => d.type === "act"), [docs]);
   const invoiced = invoices.reduce((s, d) => s + calc(d).total, 0);
   const received = payments.reduce((s, p) => s + p.amount, 0);
-  const actuals = contract.kind === "income"
-    ? { actualIncome: received, actualExpense: 0 }
-    : { actualIncome: 0, actualExpense: received };
-  const profit = actuals.actualIncome - actuals.actualExpense;
   const children = contracts.filter((c) => c.parentId === contract.id);
+  const actuals = calcActuals(contract, docs, payments, children);
+  const profit = actuals.actualIncome - actuals.actualExpense;
   const kind = CONTRACT_KIND_META[contract.kind];
   const status = CONTRACT_STATUS_META[contract.status];
 
@@ -267,7 +266,7 @@ export default function ContractDetail({
 
               <div className="border-b border-line pb-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-mut">Подчинённые расходные договоры</span>
+                  <span className="text-sm text-mut">Подчинённые договоры</span>
                 </div>
                 <div className="mt-1 space-y-1">
                   {children.length === 0 && <span className="text-sm text-dim">нет</span>}
@@ -368,6 +367,7 @@ export default function ContractDetail({
           {payments.map((p) => {
             const pDoc = docs.find((d) => d.id === p.docId);
             const isExpense = p.direction === "expense";
+            const childContract = pDoc?.contractId && pDoc.contractId !== contract.id ? contracts.find((c) => c.id === pDoc.contractId) : null;
             return (
               <div key={p.id} className="group flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3 transition-colors hover:border-line2">
                 <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-md ${isExpense ? "bg-[#FFEBEE] text-[#C62828]" : "bg-[#e1f3e9] text-paid"}`}>
@@ -378,6 +378,7 @@ export default function ContractDetail({
                   <span className="font-mono text-[10.5px] text-dim">
                     {fmtDate(p.date)} · {p.method}
                     {pDoc ? ` · № ${pDoc.number}` : ""}
+                    {childContract && <span className="ml-1 text-brand">↳ {childContract.number}</span>}
                   </span>
                 </span>
                 <span className={`font-mono text-[13.5px] font-bold ${isExpense ? "text-[#C62828]" : "text-[#2E7D32]"}`}>{isExpense ? "−" : "+"}{fmtMoney(p.amount)}</span>
