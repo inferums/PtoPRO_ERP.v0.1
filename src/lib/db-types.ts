@@ -150,6 +150,7 @@ export type DbPayment = {
   org_id: string;
   doc_id: string | null;
   contract_id: string | null;
+  counterparty_id: string | null;
   date: string;
   amount: number;
   method: string;

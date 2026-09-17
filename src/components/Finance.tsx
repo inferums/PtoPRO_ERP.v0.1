@@ -215,6 +215,7 @@ export default function Finance({
               ? contracts.map((c) => ({ id: c.id, label: `${c.number} — ${c.subject}` }))
               : undefined
           }
+          counterparties={parties.map((p) => ({ id: p.id, name: p.name }))}
           initial={payForm.mode === "edit" ? payForm.pay : null}
           onSave={(p) => {
             if (payForm.mode === "add") onAddPayment(p);

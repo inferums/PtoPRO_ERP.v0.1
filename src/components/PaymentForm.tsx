@@ -15,12 +15,18 @@ export type ContractOption = {
   label: string;
 };
 
+export type CounterpartyOption = {
+  id: string;
+  name: string;
+};
+
 const METHODS = ["Банковский перевод", "Наличные", "Карта"];
 
 export default function PaymentForm({
   title,
   docs,
   contracts,
+  counterparties,
   initial,
   defaultAmount,
   info,
@@ -30,6 +36,7 @@ export default function PaymentForm({
   title: string;
   docs?: DocOption[];
   contracts?: ContractOption[];
+  counterparties?: CounterpartyOption[];
   initial?: Payment | null;
   defaultAmount?: number;
   info?: React.ReactNode;
@@ -38,6 +45,7 @@ export default function PaymentForm({
 }) {
   const [docId, setDocId] = useState(initial?.docId || docs?.[0]?.id || "");
   const [contractId, setContractId] = useState(initial?.contractId || "");
+  const [counterpartyId, setCounterpartyId] = useState(initial?.counterpartyId || "");
   const sel = docs?.find((d) => d.id === docId);
   const [amount, setAmount] = useState<number>(
     initial?.amount ?? defaultAmount ?? (sel ? Math.max(sel.total - sel.paid, 0) : 0)
@@ -140,6 +148,18 @@ export default function PaymentForm({
             </div>
           )}
 
+          {counterparties && (
+            <div>
+              <label className={LBL}>Контрагент (необязательно)</label>
+              <select value={counterpartyId} onChange={(e) => setCounterpartyId(e.target.value)} className={`${INP} cursor-pointer`}>
+                <option value="">— не привязан —</option>
+                {counterparties.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3.5">
             <div>
               <label className={LBL}>Сумма, ₽</label>
@@ -165,7 +185,7 @@ export default function PaymentForm({
       <div className="sticky bottom-0 z-10 flex justify-end gap-2.5 border-t border-line bg-soft px-6 py-4">
         <button onClick={onClose} className={BTN_GHOST}>отмена</button>
         <button
-          onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, contractId: contractId || undefined, date, amount, method, name: name.trim() || "Оплата", direction })}
+          onClick={() => amount > 0 && onSave({ id: initial?.id ?? uid(), docId, contractId: contractId || undefined, counterpartyId: counterpartyId || undefined, date, amount, method, name: name.trim() || "Оплата", direction })}
           className={BTN_PRIMARY}
         >
           сохранить

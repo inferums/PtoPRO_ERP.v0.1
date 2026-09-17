@@ -94,6 +94,7 @@ export type Payment = {
   id: string;
   docId: string; // пустая строка — оплата не привязана к документу
   contractId?: string; // привязка к договору напрямую
+  counterpartyId?: string; // привязка к контрагенту
   date: string;
   amount: number;
   method: string;
@@ -295,6 +296,7 @@ export function loadState(userId: string): State {
             id: String(p.id ?? uid()),
             docId: String(p.docId ?? ""),
             contractId: p.contractId ? String(p.contractId) : undefined,
+            counterpartyId: p.counterpartyId ? String(p.counterpartyId) : undefined,
             date: String(p.date ?? todayISO()),
             amount: Number(p.amount ?? 0),
             method: String(p.method ?? "Банковский перевод"),
